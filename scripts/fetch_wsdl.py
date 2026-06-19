@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-"""Fetch the SOAP WSDLs for the three legacy rs.ge .asmx services and enumerate
-every operation. WSDL is the authoritative contract; Postman ships only samples."""
+"""Fetch the SOAP WSDLs for all six legacy rs.ge .asmx services and enumerate
+every operation. WSDL is the authoritative contract; Postman ships only samples.
+
+The service keys here must match the .wsdl basenames that build_inventory.py
+looks up in its SOAP_META table, so the full inventory regenerates in one pass."""
 import os
 import re
 
@@ -14,6 +17,9 @@ SERVICES = {
     "waybill": "https://services.rs.ge/WayBillService/WayBillService.asmx?WSDL",
     "ntos": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?WSDL",
     "specinvoices": "https://webserv.rs.ge/specinvoices/SpecInvoicesService.asmx?WSDL",
+    "dutyfree": "https://webserv.rs.ge/dutyfree/wsdutyfree.asmx?WSDL",
+    "taxpayer": "https://services.rs.ge/taxservice/taxpayerservice.asmx?WSDL",
+    "custompost": "https://services.rs.ge/taxservice/custompostservice.asmx?WSDL",
 }
 
 for key, url in SERVICES.items():
