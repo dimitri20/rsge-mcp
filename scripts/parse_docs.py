@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Extract text from every downloaded doc and build a unified endpoint inventory.
+"""Extract text from every downloaded doc for grepping / inspection.
 
 Outputs:
   docs/text/<name>.txt        plain text per PDF/HTML (greppable; empty => scanned)
   docs/extract_report.json    per-file extraction status (pages, chars, scanned?)
-  endpoints.json              unified inventory: SOAP (WSDL) + REST/SOAP (Postman)
+
+The unified endpoint inventory (endpoints.json) is built separately and
+authoritatively by build_inventory.py — this script does not touch it.
 """
 import json
 import os
@@ -15,10 +17,7 @@ from pypdf import PdfReader
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "docs"))
 PROTO_DIR = os.path.join(ROOT, "protocols")
-POSTMAN_DIR = os.path.join(ROOT, "postman")
-WSDL_DIR = os.path.join(ROOT, "wsdl")
 TEXT_DIR = os.path.join(ROOT, "text")
-OUT_ROOT = os.path.abspath(os.path.join(ROOT, ".."))
 os.makedirs(TEXT_DIR, exist_ok=True)
 
 
@@ -64,7 +63,6 @@ def extract_html(path):
     return p.text(), None
 
 
-# ---- 1. text extraction ----------------------------------------------------
 extract_report = []
 for fn in sorted(os.listdir(PROTO_DIR)):
     src = os.path.join(PROTO_DIR, fn)
@@ -93,64 +91,5 @@ for fn in sorted(os.listdir(PROTO_DIR)):
 with open(os.path.join(ROOT, "extract_report.json"), "w", encoding="utf-8") as f:
     json.dump(extract_report, f, ensure_ascii=False, indent=2)
 
-
-# ---- 2. endpoint inventory -------------------------------------------------
-inventory = {"soap_wsdl": {}, "postman": {}}
-
-# 2a. SOAP WSDL operations (authoritative)
-wsdl_endpoints = {
-    "waybill": "https://services.rs.ge/WayBillService/WayBillService.asmx",
-    "ntos": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx",
-    "specinvoices": "https://webserv.rs.ge/specinvoices/SpecInvoicesService.asmx",
-}
-for key, endpoint in wsdl_endpoints.items():
-    wpath = os.path.join(WSDL_DIR, key + ".wsdl")
-    if not os.path.exists(wpath):
-        continue
-    with open(wpath, "r", encoding="utf-8", errors="replace") as f:
-        wtext = f.read()
-    ops = sorted(set(re.findall(r'<(?:wsdl:)?operation\s+name="([^"]+)"', wtext)))
-    inventory["soap_wsdl"][key] = {"endpoint": endpoint, "operation_count": len(ops), "operations": ops}
-
-
-# 2b. Postman requests (verified examples)
-def walk(items, acc, prefix=""):
-    for it in items or []:
-        if "item" in it:
-            walk(it["item"], acc, (prefix + " / " if prefix else "") + it.get("name", ""))
-        elif "request" in it:
-            req = it["request"]
-            url = req.get("url")
-            if isinstance(url, dict):
-                url = url.get("raw") or "/".join(url.get("path", []))
-            acc.append(
-                {"folder": prefix, "name": it.get("name", ""), "method": req.get("method", ""), "url": url or ""}
-            )
-
-
-for fn in sorted(os.listdir(POSTMAN_DIR)):
-    with open(os.path.join(POSTMAN_DIR, fn), "r", encoding="utf-8") as f:
-        col = json.load(f)
-    reqs = []
-    walk(col.get("item", []), reqs)
-    unique_urls = sorted(set(r["url"] for r in reqs))
-    inventory["postman"][fn] = {
-        "collection_name": col.get("info", {}).get("name", ""),
-        "request_count": len(reqs),
-        "unique_url_count": len(unique_urls),
-        "requests": reqs,
-    }
-
-with open(os.path.join(OUT_ROOT, "endpoints.json"), "w", encoding="utf-8") as f:
-    json.dump(inventory, f, ensure_ascii=False, indent=2)
-
-# ---- summary numbers -------------------------------------------------------
-soap_total = sum(v["operation_count"] for v in inventory["soap_wsdl"].values())
-pm_total = sum(v["request_count"] for v in inventory["postman"].values())
-print("\n=== INVENTORY ===")
-for k, v in inventory["soap_wsdl"].items():
-    print(f"  SOAP {k:13} {v['operation_count']} ops")
-print(f"  SOAP TOTAL: {soap_total} operations")
-for k, v in inventory["postman"].items():
-    print(f"  PM   {k:25} {v['request_count']} reqs / {v['unique_url_count']} unique urls  ({v['collection_name']})")
-print(f"  POSTMAN TOTAL: {pm_total} sample requests")
+print(f"\nExtracted {len(extract_report)} docs -> {os.path.relpath(TEXT_DIR)}/")
+print("Run build_inventory.py to (re)build endpoints.json.")
