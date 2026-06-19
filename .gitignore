@@ -1,0 +1,26 @@
+# --- Raw rs.ge documentation (NOT redistributed) ---
+# These files are downloaded from https://eservices.rs.ge and are
+# © Georgian Revenue Service. Regenerate locally with:
+#   python scripts/fetch_docs.py && python scripts/parse_docs.py
+docs/protocols/
+docs/postman/
+docs/wsdl/
+docs/text/
+docs/manifest.json
+docs/download_report.json
+docs/extract_report.json
+
+# --- Local tooling / session state ---
+.claude/settings.local.json
+.remember/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+
+# --- OS ---
+.DS_Store

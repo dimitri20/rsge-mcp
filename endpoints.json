@@ -1,0 +1,848 @@
+{
+  "soap": {
+    "custompost": {
+      "service": "custompostservice",
+      "endpoint": "https://services.rs.ge/taxservice/custompostservice.asmx",
+      "description": "Postal parcels & cargo declarations",
+      "doc_ids": [
+        "4",
+        "6"
+      ],
+      "operation_count": 4,
+      "operations": [
+        "Get_ANum",
+        "Get_Asycuda_Declaration_Post",
+        "Get_CNum",
+        "Get_OpenAccess"
+      ]
+    },
+    "dutyfree": {
+      "service": "wsdutyfree",
+      "endpoint": "https://webserv.rs.ge/dutyfree/wsdutyfree.asmx",
+      "description": "Duty-Free goods forms",
+      "doc_ids": [
+        "5",
+        "9"
+      ],
+      "operation_count": 72,
+      "operations": [
+        "DeleteFormGoodsIn",
+        "DeleteFormGoodsInList",
+        "DeleteFormGoodsInOilList",
+        "DeleteFormGoodsOut",
+        "DeleteFormGoodsOutList",
+        "DeleteFormGoodsOutOilList",
+        "GetBarcodesOilList",
+        "GetFormGoodsIn",
+        "GetFormGoodsInList",
+        "GetFormGoodsInOil",
+        "GetFormGoodsInOilList",
+        "GetFormGoodsInOilOperations",
+        "GetFormGoodsInOperations",
+        "GetFormGoodsOut",
+        "GetFormGoodsOutList",
+        "GetFormGoodsOutOil",
+        "GetFormGoodsOutOilList",
+        "GetFormGoodsOutOilOperations",
+        "GetFormGoodsOutOperations",
+        "GetPointCodesOil",
+        "GetUnitsOil",
+        "RejectFormGoodsIn",
+        "RejectFormGoodsInOil",
+        "SaveBarCodesList",
+        "SaveBarCodesOilList",
+        "SaveFormGoodsIn",
+        "SaveFormGoodsInList",
+        "SaveFormGoodsInOilList",
+        "SaveFormGoodsOut",
+        "SaveFormGoodsOutList",
+        "SaveFormGoodsOutOilList",
+        "SendFormGoodsIn",
+        "SendFormGoodsInList",
+        "SendFormGoodsInOilList",
+        "SendFormGoodsOut",
+        "SendFormGoodsOutList",
+        "SendFormGoodsOutOilList",
+        "SendReceiveFormGoodsIn",
+        "SendReceiveFormGoodsInList",
+        "SendReceiveFormGoodsInOilList",
+        "UpdateFormGoodsIn",
+        "UpdateFormGoodsInList",
+        "UpdateFormGoodsInOilList",
+        "UpdateFormGoodsOut",
+        "UpdateFormGoodsOutList",
+        "UpdateFormGoodsOutOilList",
+        "UpdateReceiveFormGoodsIn",
+        "UpdateReceiveFormGoodsInList",
+        "UpdateReceiveFormGoodsInOilList",
+        "form4_delete_record",
+        "form4_new_record",
+        "form4_reject",
+        "form4_send_record",
+        "form4_update_record",
+        "form5_delete_record",
+        "form5_new_record",
+        "form5_send_record",
+        "form5_update_record",
+        "get_current_balance",
+        "get_current_balances",
+        "get_form4",
+        "get_form4_list",
+        "get_form4_operations",
+        "get_form5",
+        "get_form5_list",
+        "get_form5_operations",
+        "get_goods_statuses",
+        "get_point_codes",
+        "get_units",
+        "save_bar_codes",
+        "send_receive_form4",
+        "update_receive_form4"
+      ]
+    },
+    "ntos": {
+      "service": "ntosservice",
+      "endpoint": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx",
+      "description": "VAT invoices (ანგარიშ-ფაქტურა)",
+      "doc_ids": [
+        "2"
+      ],
+      "operation_count": 54,
+      "operations": [
+        "acsept_invoice_request_status",
+        "acsept_invoice_status",
+        "add_inv_to_decl",
+        "attach_advance_invoice",
+        "change_invoice_status",
+        "chek",
+        "create_ser_user",
+        "del_invoice_request",
+        "delete_invoice_desc",
+        "delete_ntos_invoices_inv_nos",
+        "detach_advance_invoices",
+        "g_invoice",
+        "get_akciz",
+        "get_attachable_advance_invoices",
+        "get_attached_advance_invoices",
+        "get_buyer_filter_count",
+        "get_buyer_invoices",
+        "get_buyer_invoices_r",
+        "get_decl_date",
+        "get_invoice",
+        "get_invoice_changes",
+        "get_invoice_d",
+        "get_invoice_desc",
+        "get_invoice_id",
+        "get_invoice_numbers",
+        "get_invoice_request",
+        "get_invoice_requests",
+        "get_invoice_tins",
+        "get_makoreqtirebeli",
+        "get_ntos_invoices_inv_nos",
+        "get_org_name_from_un_id",
+        "get_requested_invoices",
+        "get_seller_filter_count",
+        "get_seller_invoices",
+        "get_seller_invoices_r",
+        "get_seq_nums",
+        "get_ser_users",
+        "get_ser_users_notes",
+        "get_tin_from_un_id",
+        "get_un_id_from_tin",
+        "get_un_id_from_user_id",
+        "get_user_invoices",
+        "k_invoice",
+        "print_invoices",
+        "ref_invoice_status",
+        "save_invoice",
+        "save_invoice_a",
+        "save_invoice_desc",
+        "save_invoice_n",
+        "save_invoice_request",
+        "save_ntos_invoices_inv_nos",
+        "update_advance_invoice",
+        "update_ser_user",
+        "what_is_my_ip"
+      ]
+    },
+    "specinvoices": {
+      "service": "SpecInvoicesService",
+      "endpoint": "https://webserv.rs.ge/specinvoices/SpecInvoicesService.asmx",
+      "description": "NSAF special invoices (ნსაფ)",
+      "doc_ids": [
+        "3"
+      ],
+      "operation_count": 45,
+      "operations": [
+        "acsept_invoice_status_n",
+        "add_inv_to_decl_n",
+        "add_spec_invoices_ssaf_n",
+        "add_spec_invoices_ssd_n",
+        "attach_advance_invoice",
+        "change_invoice_status_n",
+        "check_spec_users",
+        "chek_in",
+        "correct_driver_info",
+        "correct_transport_mark",
+        "del_spec_invoices_ssaf",
+        "del_spec_invoices_ssd",
+        "delete_invoice_desc",
+        "detach_advance_invoice",
+        "gauqmebis_mizezi_n",
+        "get_attachable_advance_invs",
+        "get_attached_advance_invoices",
+        "get_buyer_filter_count",
+        "get_buyer_invoices_n",
+        "get_buyer_invoices_r_n",
+        "get_invoice_d",
+        "get_invoice_desc_n",
+        "get_invoice_n",
+        "get_invoice_numbers",
+        "get_invoice_tins",
+        "get_makoreqtirebeli",
+        "get_piradi_nomeri",
+        "get_rs_org_objects",
+        "get_seller_filter_count",
+        "get_seller_invoices_n",
+        "get_seller_invoices_r_n",
+        "get_spec_product_by_id",
+        "get_spec_products_n",
+        "get_spec_ssafs_n",
+        "get_spec_ssds_n",
+        "get_v_org_object_address",
+        "get_v_org_objects_by_un_id_n",
+        "k_invoice_n",
+        "print_invoices",
+        "ref_invoice_status_n",
+        "save_invoice_b_n",
+        "save_invoice_desc_n",
+        "save_invoice_request",
+        "start_transport_new_n",
+        "update_advance_invoice"
+      ]
+    },
+    "taxpayer": {
+      "service": "taxpayerservice",
+      "endpoint": "https://services.rs.ge/taxservice/taxpayerservice.asmx",
+      "description": "Taxpayer info / income / Z-reports",
+      "doc_ids": [
+        "10",
+        "11",
+        "14"
+      ],
+      "operation_count": 20,
+      "operations": [
+        "Customs_WareHouse_Exit",
+        "GetPersonIncomeData",
+        "GetTPInfoPublic",
+        "GetTPInfoPublicContacts",
+        "Get_Cargo200_Info",
+        "Get_Income_Amount",
+        "Get_LegalPerson_Info",
+        "Get_Payer_Info",
+        "Get_Payer_Nace_Info",
+        "Get_QuickCash_Info",
+        "Get_Waybill_Month_Amount",
+        "Get_Z_Report_Details",
+        "Get_Z_Report_Sum",
+        "Get_comp_act_new",
+        "Get_comp_act_old",
+        "Gita_Payer_Activation",
+        "Gita_Sms_Verification",
+        "Payer_Info_Activation",
+        "Tp_sms_verification",
+        "get_payer_info_gita"
+      ]
+    },
+    "waybill": {
+      "service": "WayBillService",
+      "endpoint": "https://services.rs.ge/WayBillService/WayBillService.asmx",
+      "description": "Waybills (ზედნადები)",
+      "doc_ids": [
+        "1"
+      ],
+      "operation_count": 56,
+      "operations": [
+        "chek_service_user",
+        "close_waybill",
+        "close_waybill_transporter",
+        "close_waybill_vd",
+        "confirm_waybill",
+        "create_service_user",
+        "del_waybill",
+        "delete_bar_code",
+        "delete_car_numbers",
+        "delete_waybill_tamplate",
+        "get_adjusted_waybill",
+        "get_adjusted_waybills",
+        "get_akciz_codes",
+        "get_bar_codes",
+        "get_buyer_waybilll_goods_list",
+        "get_buyer_waybills",
+        "get_buyer_waybills_ex",
+        "get_c_waybill",
+        "get_car_numbers",
+        "get_error_codes",
+        "get_name_from_tin",
+        "get_payer_type_from_un_id",
+        "get_print_pdf",
+        "get_server_time",
+        "get_service_users",
+        "get_tin_from_un_id",
+        "get_trans_types",
+        "get_transporter_waybills",
+        "get_waybill",
+        "get_waybill_by_number",
+        "get_waybill_goods_list",
+        "get_waybill_tamplate",
+        "get_waybill_tamplates",
+        "get_waybill_types",
+        "get_waybill_units",
+        "get_waybills",
+        "get_waybills_ex",
+        "get_waybills_medicaments_moh",
+        "get_waybills_v1",
+        "get_wood_types",
+        "is_vat_payer",
+        "is_vat_payer_tin",
+        "ref_waybill",
+        "ref_waybill_vd",
+        "reject_waybill",
+        "save_bar_code",
+        "save_car_numbers",
+        "save_invoice",
+        "save_waybill",
+        "save_waybill_tamplate",
+        "save_waybill_transporter",
+        "send_waybil_vd",
+        "send_waybill",
+        "send_waybill_transporter",
+        "update_service_user",
+        "what_is_my_ip"
+      ]
+    }
+  },
+  "rest": {
+    "eapi_users": {
+      "base": "https://eapi.rs.ge/Users",
+      "auth": "credentials -> bearer token",
+      "endpoints": [
+        "Authenticate",
+        "AuthenticatePin",
+        "SignOut"
+      ]
+    },
+    "eapi_common_org": {
+      "base": "https://eapi.rs.ge",
+      "auth": "bearer",
+      "endpoints": [
+        "Org/GetVatPayerStatus",
+        "Org/GetOrgInfoByTin",
+        "Common/GetUnits",
+        "Common/GetTransactionResult"
+      ]
+    },
+    "eapi_invoice": {
+      "base": "https://eapi.rs.ge/Invoice",
+      "auth": "bearer",
+      "doc_ids": [
+        "15"
+      ],
+      "endpoints": [
+        "GetInvoice",
+        "SaveInvoice",
+        "ActivateInvoice",
+        "ActivateInvoices",
+        "DeleteInvoice",
+        "CancelInvoice",
+        "RefuseInvoice",
+        "RefuseInvoices",
+        "ConfirmInvoice",
+        "ConfirmInvoices",
+        "ListInvoices",
+        "ListExcise",
+        "ListBarCodes",
+        "GetBarCode",
+        "ClearBarCodes",
+        "GetSeqNum",
+        "CreateDecl",
+        "ListGoods",
+        "GetActions"
+      ]
+    },
+    "eapi_employees": {
+      "base": "https://eapi.rs.ge/Employees",
+      "auth": "bearer",
+      "doc_ids": [
+        "16"
+      ],
+      "endpoints": [
+        "GetCountries",
+        "GetEmployee",
+        "SaveEmployee",
+        "ListEmployees"
+      ]
+    },
+    "eapi_customs": {
+      "base": "https://eapi.rs.ge/CustomsDeclarations",
+      "auth": "bearer",
+      "doc_ids": [
+        "18"
+      ],
+      "endpoints": [
+        "GetAsycudaDeclarations"
+      ]
+    },
+    "xdata_taxpayer": {
+      "base": "https://xdata.rs.ge/TaxPayer",
+      "auth": "api key / token",
+      "doc_ids": [
+        "17"
+      ],
+      "endpoints": [
+        "RSPublicInfo",
+        "IncomeInfo",
+        "SmsVerification",
+        "CheckPhoneNumber"
+      ]
+    },
+    "oauth": {
+      "base": "https://eservices.rs.ge/WebServices/oAuth.ashx",
+      "auth": "OAuth",
+      "doc_ids": [
+        "13"
+      ],
+      "endpoints": [
+        "oAuth.ashx (authorize/token)"
+      ]
+    }
+  },
+  "postman": {
+    "01_postman.json": {
+      "collection_name": "Waybill - Production-",
+      "request_count": 20,
+      "requests": [
+        {
+          "name": "get_error_codes",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=get_error_codes"
+        },
+        {
+          "name": "get_service_users",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=get_service_users"
+        },
+        {
+          "name": "get_name_from_tin",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=get_name_from_tin"
+        },
+        {
+          "name": "get_akciz_codes",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=get_akciz_codes"
+        },
+        {
+          "name": "get_akciz_codes  with s_text",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=get_akciz_codes"
+        },
+        {
+          "name": "get_waybill",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=get_waybill"
+        },
+        {
+          "name": "get_waybills",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=get_waybills"
+        },
+        {
+          "name": "get_buyer_waybills",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=get_buyer_waybills"
+        },
+        {
+          "name": "chek_service_user",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=chek_service_user"
+        },
+        {
+          "name": "save_waybill",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=save_waybill"
+        },
+        {
+          "name": "save_waybill ქვე-ზედნადები",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=save_waybill"
+        },
+        {
+          "name": "save_waybill დასრულებული ზედნადების კორექტირება",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=save_waybill"
+        },
+        {
+          "name": "save_waybill გადამზიდავის ტიპის ტრანსპორტირება",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=save_waybill"
+        },
+        {
+          "name": "send_waybill",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=send_waybill"
+        },
+        {
+          "name": "save_invoice",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=save_invoice"
+        },
+        {
+          "name": "close_waybill",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=close_waybill"
+        },
+        {
+          "name": "confirm_waybill",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=confirm_waybill"
+        },
+        {
+          "name": "reject_waybill",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=reject_waybill"
+        },
+        {
+          "name": "get_waybill_types",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=get_waybill_types"
+        },
+        {
+          "name": "get_waybills_v1",
+          "method": "POST",
+          "url": "https://services.rs.ge/WayBillService/WayBillService.asmx?op=get_waybills_v1"
+        }
+      ]
+    },
+    "02_postman.json": {
+      "collection_name": "Invoice",
+      "request_count": 23,
+      "requests": [
+        {
+          "name": "get_un_id_from_user_id",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=get_un_id_from_user_id"
+        },
+        {
+          "name": "get_tin_from_un_id",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=get_tin_from_un_id"
+        },
+        {
+          "name": "get_un_id_from_tin",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=get_un_id_from_tin"
+        },
+        {
+          "name": "get_ser_users",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=get_ser_users"
+        },
+        {
+          "name": "get_ser_users_notes",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=get_ser_users_notes"
+        },
+        {
+          "name": "get_invoice",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=get_invoice"
+        },
+        {
+          "name": "get_invoice_desc",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=get_invoice_desc"
+        },
+        {
+          "name": "get_seller_invoices",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=get_seller_invoices"
+        },
+        {
+          "name": "get_buyer_invoices",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=get_buyer_invoices"
+        },
+        {
+          "name": "get_ntos_invoices_inv_nos",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=get_ntos_invoices_inv_nos"
+        },
+        {
+          "name": "what_is_my_ip",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=what_is_my_ip"
+        },
+        {
+          "name": "chek",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=chek"
+        },
+        {
+          "name": "change_invoice_status",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=change_invoice_status"
+        },
+        {
+          "name": "save_invoice",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=save_invoice"
+        },
+        {
+          "name": "save_invoice Copy",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=save_invoice"
+        },
+        {
+          "name": "save_invoice_a",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=save_invoice_a"
+        },
+        {
+          "name": "save_invoice_desc",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=save_invoice_desc"
+        },
+        {
+          "name": "delete_invoice_desc",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=delete_invoice_desc"
+        },
+        {
+          "name": "k_invoice",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=k_invoice"
+        },
+        {
+          "name": "save_ntos_invoices_inv_nos",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=save_ntos_invoices_inv_nos"
+        },
+        {
+          "name": "delete_ntos_invoices_inv_nos",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=delete_ntos_invoices_inv_nos"
+        },
+        {
+          "name": "get_requested_invoices",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=get_requested_invoices"
+        },
+        {
+          "name": "get_invoice_id",
+          "method": "POST",
+          "url": "https://www.revenue.mof.ge/ntosservice/ntosservice.asmx?op=get_invoice_id"
+        }
+      ]
+    },
+    "03_postman.json": {
+      "collection_name": "SpecInvoices",
+      "request_count": 4,
+      "requests": [
+        {
+          "name": "get_invoice_n",
+          "method": "POST",
+          "url": "https://webserv.rs.ge/specinvoices/SpecInvoicesService.asmx?op=get_invoice_n"
+        },
+        {
+          "name": "get_buyer_invoices_n",
+          "method": "POST",
+          "url": "https://webserv.rs.ge/specinvoices/SpecInvoicesService.asmx?op=get_buyer_invoices_n"
+        },
+        {
+          "name": "get_seller_invoices_n",
+          "method": "POST",
+          "url": "https://webserv.rs.ge/specinvoices/SpecInvoicesService.asmx?op=get_seller_invoices_n"
+        },
+        {
+          "name": "chek_in",
+          "method": "POST",
+          "url": "https://webserv.rs.ge/specinvoices/SpecInvoicesService.asmx?op=chek_in"
+        }
+      ]
+    },
+    "15_postman.json": {
+      "collection_name": "Eservice API",
+      "request_count": 23,
+      "requests": [
+        {
+          "name": "https://eapi.rs.ge/Users/Authenticate",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Users/Authenticate"
+        },
+        {
+          "name": "https://eapi.rs.ge/Users/AuthenticatePin",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Users/AuthenticatePin"
+        },
+        {
+          "name": "https://eapi.rs.ge/Users/SignOut",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Users/SignOut"
+        },
+        {
+          "name": "https://eapi.rs.ge/Org/GetVatPayerStatus",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Org/GetVatPayerStatus"
+        },
+        {
+          "name": "https://eapi.rs.ge/Common/GetUnits",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Common/GetUnits"
+        },
+        {
+          "name": "https://eapi.rs.ge/Common/GetTransactionResult",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Common/GetTransactionResult"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/GetInvoice",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/GetInvoice"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/SaveInvoice",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/SaveInvoice"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/ActivateInvoice",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/ActivateInvoice"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/ActivateInvoices",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/ActivateInvoices"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/DeleteInvoice",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/DeleteInvoice"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/CancelInvoice",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/CancelInvoice"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/RefuseInvoice",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/RefuseInvoice"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/RefuseInvoices",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/RefuseInvoices"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/ConfirmInvoice",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/ConfirmInvoice"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/ConfirmInvoices",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/ConfirmInvoices"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/ListInvoices",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/ListInvoices"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/ListExcise",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/ListExcise"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/ListBarCodes",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/ListBarCodes"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/GetBarCode",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/GetBarCode"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/ClearBarCodes",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/ClearBarCodes"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/GetSeqNum",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/GetSeqNum"
+        },
+        {
+          "name": "https://eapi.rs.ge/Invoice/CreateDecl",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Invoice/CreateDecl"
+        }
+      ]
+    },
+    "16_postman.json": {
+      "collection_name": "Employee API",
+      "request_count": 7,
+      "requests": [
+        {
+          "name": "https://eapi.rs.ge/Users/Authenticate",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Users/Authenticate"
+        },
+        {
+          "name": "https://eapi.rs.ge/Users/AuthenticatePin",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Users/AuthenticatePin"
+        },
+        {
+          "name": "https://eapi.rs.ge/Users/SignOut",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Users/SignOut"
+        },
+        {
+          "name": "https://eapi.rs.ge/Employees/GetCountries",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Employees/GetCountries"
+        },
+        {
+          "name": "https://eapi.rs.ge/Employees/GetEmployee",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Employees/GetEmployee"
+        },
+        {
+          "name": "https://eapi.rs.ge/Employees/SaveEmployee",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Employees/SaveEmployee"
+        },
+        {
+          "name": "https://eapi.rs.ge/Employees/ListEmployees",
+          "method": "POST",
+          "url": "https://eapi.rs.ge/Employees/ListEmployees"
+        }
+      ]
+    },
+    "17_postman.json": {
+      "collection_name": "TaxPayerPublicInfo",
+      "request_count": 1,
+      "requests": [
+        {
+          "name": "TaxPayer/RSPublicInfo",
+          "method": "POST",
+          "url": "https://xdata.rs.ge/TaxPayer/RSPublicInfo"
+        }
+      ]
+    }
+  }
+}
