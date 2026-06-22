@@ -9,9 +9,10 @@ The repo also contains a documentation-inventory pipeline (`scripts/`, `endpoint
 
 ## Status
 
-- **Phase 1 (REST / eAPI)** — in progress. Bearer-token auth, taxpayer/org lookups,
+- **Phase 1 (REST / eAPI)** — implemented. Bearer-token auth, taxpayer/org lookups,
   VAT-invoice lifecycle against `eapi.rs.ge` / `xdata.rs.ge`.
-- **Phase 2 (SOAP)** — planned. Waybills + VAT invoices via the legacy `.asmx` services.
+- **Phase 2 (SOAP)** — implemented. Waybills (incl. nested save/send/close) and VAT-invoice
+  reads via the legacy `.asmx` services. **22 tools total.**
 
 ## Install
 

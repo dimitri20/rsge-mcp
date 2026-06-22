@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Two things live here:
 
 1. **The rs.ge MCP server** (`src/rsge_mcp/`) — an MCP server exposing the Georgian Revenue
-   Service API as LLM tools. **Phase 1 (REST/eAPI) is implemented**; the legacy SOAP surface
-   (Phase 2) is not built yet. See `SUMMARY.md` §7 for the overall plan.
+   Service API as LLM tools. **Both generations are implemented** (22 tools): Phase 1 (REST/eAPI)
+   and Phase 2 (legacy SOAP — waybills + VAT invoices). See `SUMMARY.md` §7 for the overall plan.
 2. **A documentation-inventory pipeline** (`scripts/`, `endpoints.json`, `SUMMARY.md`) that mines
    the rs.ge API docs into a machine-readable inventory. This is the reference the server's tools
    were hand-authored against — it is **not** a runtime dependency of the server.
@@ -103,9 +103,17 @@ MCP; tool modules know nothing about HTTP wire details.
 - `errors.py` — `RsgeError` hierarchy; `STATUS.ID` → exception, surfacing the Georgian `TEXT`
   verbatim plus an English gloss for known codes.
 
-Writes (`Save*`, invoice lifecycle) are never auto-retried — duplicate invoices/waybills have legal
-consequences. Phase 2 (SOAP) will add a `soap/` package with hand-written Jinja2 XML templates +
-lxml diffgram parsing (zeep is unsuitable for the `<s:any>` responses).
+Writes (`Save*`, `send`/`close`, invoice lifecycle) are never auto-retried — duplicate
+invoices/waybills have legal consequences.
+
+**SOAP layer (`soap/`, Phase 2):** `client.py` renders a SOAP 1.1 envelope, POSTs `text/xml` with
+the `SOAPAction` header, and parses the response; `build.py` serializes request XML
+**programmatically from ordered dicts** (hand-written, not zeep — zeep can't type the `<s:any>`
+diffgram responses); `parse.py` turns diffgram DataSets into row dicts and scalar responses into
+dicts, raising on SOAP faults; `credentials.py` injects the `su`/`sp` service-user into every body;
+`services.py` holds per-service endpoints. SOAP tools live in `tools/soap/`. (The plan called for
+Jinja2 templates; a programmatic ordered-dict builder proved simpler and more testable for the
+many-optional-filter ops while staying fully hand-written.)
 
 ### How the inventory is assembled (`build_inventory.py`)
 
@@ -128,3 +136,7 @@ lxml diffgram parsing (zeep is unsuitable for the `<s:any>` responses).
   `etest1` during live testing. See the note in `src/rsge_mcp/tools/invoice.py`.
 - Real eAPI accounts with SMS 2FA need `RSGE_2FA_MODE=tool` (exposes an `rsge_submit_pin` tool); the
   public test account is 2FA-off, so the default `off` mode is fine for development.
+- SOAP request **element order matters** (XSD sequences) and must follow the WSDL — e.g. `su`/`sp`
+  come first in WayBillService ops but **last** in ntos ops. SOAP tools build params in WSDL order;
+  param names were extracted from `docs/wsdl/*.wsdl`. rs.ge's own field spellings are preserved
+  verbatim (e.g. `SELER_UN_ID`, `TRANSPORT_COAST` in the waybill payload) — don't "correct" them.

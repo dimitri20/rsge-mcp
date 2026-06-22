@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 
 from rsge_mcp.config import Hosts, Settings, TwoFactorMode
@@ -23,4 +25,12 @@ def settings() -> Settings:
         soap_password=None,
         http_timeout=5.0,
         rate_delay_ms=0,
+    )
+
+
+@pytest.fixture
+def soap_settings(settings: Settings) -> Settings:
+    """Test settings with SOAP service-user credentials configured."""
+    return dataclasses.replace(
+        settings, soap_user="itana", soap_tin="206322102", soap_password="123456"
     )
