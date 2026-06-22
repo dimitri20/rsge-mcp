@@ -4,18 +4,41 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-Groundwork for an **rs.ge MCP server**. rs.ge is the Georgian Revenue Service e-services
-portal; this repo mines its public API documentation into a machine-readable inventory so an
-MCP server can later be built against it. **The MCP server itself does not exist yet** — see
-`SUMMARY.md` §7 for the build plan. Right now the repo is a documentation/inventory pipeline.
+Two things live here:
+
+1. **The rs.ge MCP server** (`src/rsge_mcp/`) — an MCP server exposing the Georgian Revenue
+   Service API as LLM tools. **Phase 1 (REST/eAPI) is implemented**; the legacy SOAP surface
+   (Phase 2) is not built yet. See `SUMMARY.md` §7 for the overall plan.
+2. **A documentation-inventory pipeline** (`scripts/`, `endpoints.json`, `SUMMARY.md`) that mines
+   the rs.ge API docs into a machine-readable inventory. This is the reference the server's tools
+   were hand-authored against — it is **not** a runtime dependency of the server.
 
 Docs and `SUMMARY.md` are partly in **Georgian** (service names, doc titles); the text
 extraction preserves Georgian, so it's greppable.
 
 ## Commands
 
-No build system, test suite, or linter is configured — this is a set of standalone Python
-scripts. Dependencies (`requests`, `pypdf`) are not pinned in a requirements file:
+### MCP server (`src/rsge_mcp/`)
+
+Python 3.12, packaged via `pyproject.toml` (`src/` layout). Install, run, and develop:
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+rsge-mcp                       # or: python -m rsge_mcp   (stdio transport)
+
+pytest                         # unit tests + coverage (gate: --cov-fail-under=80)
+pytest tests/unit/test_auth.py::test_login_caches_token   # a single test
+black src tests && ruff check src tests && mypy src
+RSGE_RUN_INTEGRATION=1 pytest -m integration   # opt-in LIVE smoke (public test creds)
+```
+
+Config is via env / `.env` (see `.env.example`). `RSGE_ENV=test` (default) injects the documented
+public test account when no creds are set; `prod` **never** falls back to a test identity.
+
+### Documentation pipeline (`scripts/`)
+
+Standalone scripts; deps (`requests`, `pypdf`) are not pinned in a requirements file:
 
 ```bash
 pip install requests pypdf
@@ -62,6 +85,28 @@ The rs.ge API splits into **two generations** that an MCP must bridge differentl
 Four auth models exist (SOAP service-user, eAPI bearer, 2-step SMS OTP, OAuth delegation). Out of
 scope for an HTTP MCP: the SAM module (smartcard hardware protocol) and the Windows desktop apps.
 
+## MCP server architecture (`src/rsge_mcp/`)
+
+Phase 1 implements the REST/eAPI surface. Strict layering: transport clients know nothing about
+MCP; tool modules know nothing about HTTP wire details.
+
+- `server.py` / `__main__.py` — build a FastMCP server (stdio) and register every tool module.
+- `config.py` — `Settings` (frozen) from env/`.env`; resolves test-vs-prod hosts; injects public
+  test creds only when `RSGE_ENV=test`.
+- `rest/` — `client.py` (generic POST: bearer header, envelope unwrap, **one-shot `-104` re-auth**,
+  reads-retried / **writes-never-retried**), `auth.py` (`EapiSession`: lazy login, token cache with
+  expiry skew, `asyncio.Lock` against login stampede, 2FA PIN modes), `envelope.py`
+  (`{DATA,STATUS}` → `DATA` or raise), `rate_limit.py` (shared ~300ms gate), `_http.py`
+  (httpx → `RsgeError` mapping).
+- `tools/` — one module per domain, each exposing `register(mcp, ctx)`. Tools are **hand-authored**
+  with curated params/docstrings; `endpoints.json` is the reference, not an auto-gen source.
+- `errors.py` — `RsgeError` hierarchy; `STATUS.ID` → exception, surfacing the Georgian `TEXT`
+  verbatim plus an English gloss for known codes.
+
+Writes (`Save*`, invoice lifecycle) are never auto-retried — duplicate invoices/waybills have legal
+consequences. Phase 2 (SOAP) will add a `soap/` package with hand-written Jinja2 XML templates +
+lxml diffgram parsing (zeep is unsuitable for the `<s:any>` responses).
+
 ### How the inventory is assembled (`build_inventory.py`)
 
 - **SOAP** section: parsed from the `.wsdl` files via regex on `<operation name="…">`. Per-service
@@ -78,3 +123,8 @@ scope for an HTTP MCP: the SAM module (smartcard hardware protocol) and the Wind
   both tables.
 - Environments: production is `eapi.rs.ge` / `services.rs.ge`; a test host `etest1.rs.ge` is referenced
   by the SPA. Confirm which the user wants before any live integration work.
+- MCP server single-invoice lifecycle tools (`rsge_confirm_invoice` / `refuse` / `cancel`) send
+  `{"ID": n}`; the exact key is thin in the docs (`GetInvoice` uses `InvoiceID`) — confirm against
+  `etest1` during live testing. See the note in `src/rsge_mcp/tools/invoice.py`.
+- Real eAPI accounts with SMS 2FA need `RSGE_2FA_MODE=tool` (exposes an `rsge_submit_pin` tool); the
+  public test account is 2FA-off, so the default `off` mode is fine for development.
