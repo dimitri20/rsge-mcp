@@ -22,6 +22,17 @@ EXPECTED_TOOLS = {
     "rsge_cancel_invoice",
     "rsge_taxpayer_public_info",
     "rsge_signout",
+    # SOAP (Phase 2)
+    "rsge_waybill_check_service_user",
+    "rsge_get_waybill",
+    "rsge_get_waybills",
+    "rsge_save_waybill",
+    "rsge_send_waybill",
+    "rsge_close_waybill",
+    "rsge_ntos_check_service_user",
+    "rsge_ntos_get_invoice",
+    "rsge_ntos_get_seller_invoices",
+    "rsge_ntos_get_buyer_invoices",
 }
 
 
