@@ -114,3 +114,93 @@ async def test_ntos_seller_invoices_filters_and_su_last(soap_settings) -> None:
         assert "<un_id>731937</un_id>" in body
         assert "<invoice_no>A-1</invoice_no>" in body
         assert body.index("<un_id>") < body.index("<su>")  # su/sp last for ntos
+
+
+async def test_ntos_save_invoice_order_and_optional(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(NTOS.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_scalar("save_invoice", save_invoiceResult="42")
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            ntos_invoice.register(fake, ctx)
+            await fake.tools["rsge_ntos_save_invoice"](
+                invoice_id=42,
+                operation_date="2026-02-01T10:00:00",
+                seller_un_id=731937,
+                buyer_un_id=555,
+                overhead_dt="2026-02-01T09:00:00",
+                b_s_user_id=135,
+                user_id=783,
+            )
+        body = _content(route)
+        # WSDL order: user_id, invois_id, operation_date, seller_un_id, buyer_un_id,
+        # [overhead_no], overhead_dt, b_s_user_id, su, sp
+        order = [
+            "<user_id>",
+            "<invois_id>",
+            "<operation_date>",
+            "<seller_un_id>",
+            "<buyer_un_id>",
+            "<overhead_dt>",
+            "<b_s_user_id>",
+            "<su>",
+            "<sp>",
+        ]
+        positions = [body.index(tag) for tag in order]
+        assert positions == sorted(positions)
+        assert "<overhead_no>" not in body  # optional, omitted when None
+        assert "<invois_id>42</invois_id>" in body
+
+
+async def test_ntos_save_invoice_desc_su_sp_mid_sequence(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(NTOS.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_scalar("save_invoice_desc", save_invoice_descResult="ok")
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            ntos_invoice.register(fake, ctx)
+            await fake.tools["rsge_ntos_save_invoice_desc"](
+                invoice_id=42,
+                goods_name="Widget",
+                g_number=2,
+                full_amount=200,
+                drg_amount=36,
+                aqcizi_amount=0,
+                akciz_id=0,
+            )
+        body = _content(route)
+        # su/sp sit between id and invois_id, not first/last
+        assert body.index("<id>") < body.index("<su>") < body.index("<invois_id>")
+        assert body.index("<invois_id>") < body.index("<goods>") < body.index("<g_number>")
+        assert "<goods>Widget</goods>" in body
+        assert "<g_unit>" not in body  # optional, omitted
+
+
+async def test_ntos_change_invoice_status_body(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(NTOS.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_scalar("change_invoice_status", change_invoice_statusResult="ok")
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            ntos_invoice.register(fake, ctx)
+            await fake.tools["rsge_ntos_change_invoice_status"](invoice_id=42, status=2)
+        body = _content(route)
+        assert "<inv_id>42</inv_id>" in body
+        assert "<status>2</status>" in body
+
+
+async def test_ntos_save_invoice_requires_credentials(settings) -> None:
+    async with make_ctx(settings) as ctx:  # no SOAP creds
+        fake = FakeMCP()
+        ntos_invoice.register(fake, ctx)
+        with pytest.raises(RsgeConfigError):
+            await fake.tools["rsge_ntos_change_invoice_status"](invoice_id=1, status=2)

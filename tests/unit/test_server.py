@@ -33,6 +33,9 @@ EXPECTED_TOOLS = {
     "rsge_ntos_get_invoice",
     "rsge_ntos_get_seller_invoices",
     "rsge_ntos_get_buyer_invoices",
+    "rsge_ntos_save_invoice",
+    "rsge_ntos_save_invoice_desc",
+    "rsge_ntos_change_invoice_status",
 }
 
 
