@@ -140,3 +140,8 @@ many-optional-filter ops while staying fully hand-written.)
   come first in WayBillService ops but **last** in ntos ops. SOAP tools build params in WSDL order;
   param names were extracted from `docs/wsdl/*.wsdl`. rs.ge's own field spellings are preserved
   verbatim (e.g. `SELER_UN_ID`, `TRANSPORT_COAST` in the waybill payload) — don't "correct" them.
+- `xdata.rs.ge` uses a **different response shape** than eAPI: success is a bare JSON array, and
+  errors are `{Status, Message}` — NOT the `{DATA, STATUS:{ID,TEXT}}` envelope. `unwrap` passes both
+  through unchanged (the `Status` value isn't a dict, so it's treated as no-envelope). Quirk: the
+  eAPI test id `206322102` is rejected by xdata `RSPublicInfo` (`Status:-100`); `12345678910` is the
+  working public test individual (used by the live smoke test).
