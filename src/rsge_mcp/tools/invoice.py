@@ -70,7 +70,9 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
         )
         if extra:
             invoice.update(extra)
-        data = await ctx.rest.post("/Invoice/SaveInvoice", {"INVOICE": invoice}, retry_reads=False)
+        data = await ctx.rest.post(
+            "/Invoice/SaveInvoice", {"INVOICE": invoice}, retry_reads=False, write=True
+        )
         if wait and isinstance(data, dict):
             tid = data.get("TransactionId") or data.get("TRANSACTION_ID")
             if tid:
@@ -81,21 +83,21 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
     async def rsge_confirm_invoice(invoice_id: int) -> Any:
         """Buyer-confirm a VAT invoice by InvoiceID. WRITE — not auto-retried."""
         return await ctx.rest.post(
-            "/Invoice/ConfirmInvoice", _id_body(invoice_id), retry_reads=False
+            "/Invoice/ConfirmInvoice", _id_body(invoice_id), retry_reads=False, write=True
         )
 
     @mcp.tool()
     async def rsge_refuse_invoice(invoice_id: int) -> Any:
         """Buyer-refuse a VAT invoice by InvoiceID. WRITE — not auto-retried."""
         return await ctx.rest.post(
-            "/Invoice/RefuseInvoice", _id_body(invoice_id), retry_reads=False
+            "/Invoice/RefuseInvoice", _id_body(invoice_id), retry_reads=False, write=True
         )
 
     @mcp.tool()
     async def rsge_cancel_invoice(invoice_id: int) -> Any:
         """Seller-cancel a VAT invoice by InvoiceID. WRITE — not auto-retried."""
         return await ctx.rest.post(
-            "/Invoice/CancelInvoice", _id_body(invoice_id), retry_reads=False
+            "/Invoice/CancelInvoice", _id_body(invoice_id), retry_reads=False, write=True
         )
 
 

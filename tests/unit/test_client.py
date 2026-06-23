@@ -87,6 +87,39 @@ async def test_read_retried_on_503(settings) -> None:
         assert target.call_count == 2
 
 
+async def test_read_retried_on_429(settings) -> None:
+    with respx.mock as router:
+        _token_route(router)
+        target = router.post(TARGET).mock(
+            side_effect=[httpx.Response(429), httpx.Response(200, json=env({"ok": True}))]
+        )
+        async with httpx.AsyncClient() as http:
+            data = await _client(settings, http).post("/Org/GetOrgInfoByTin", {"Tin": "1"})
+        assert data == {"ok": True}
+        assert target.call_count == 2
+
+
+async def test_retry_after_honored(settings) -> None:
+    slept: list[float] = []
+
+    async def rec(delay: float) -> None:
+        slept.append(delay)
+
+    with respx.mock as router:
+        _token_route(router)
+        router.post(TARGET).mock(
+            side_effect=[
+                httpx.Response(429, headers={"Retry-After": "5"}),
+                httpx.Response(200, json=env({"ok": True})),
+            ]
+        )
+        async with httpx.AsyncClient() as http:
+            session = EapiSession(settings, http, RateLimiter(0.0))
+            client = RestClient(settings, http, session, RateLimiter(0.0), sleep=rec)
+            await client.post("/Org/GetOrgInfoByTin", {"Tin": "1"})
+    assert max(slept) >= 5.0  # backoff honored the Retry-After
+
+
 async def test_write_not_retried_on_503(settings) -> None:
     with respx.mock as router:
         _token_route(router)

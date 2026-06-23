@@ -12,7 +12,7 @@ from urllib.parse import urlsplit, urlunsplit
 import httpx
 
 from ..config import Settings
-from ..errors import RsgeHttpError, RsgeTimeoutError
+from ..errors import RsgeHttpError, RsgeTimeoutError, RsgeWriteBlockedError
 from ..logging import get_logger
 from ..rest.rate_limit import RateLimiter
 from .build import operation_element
@@ -62,8 +62,19 @@ class SoapClient:
         body = operation_element(service.namespace, operation, params)
         return _ENVELOPE.format(body=body)
 
-    async def call(self, service: SoapService, operation: str, params: dict[str, Any]) -> Any:
-        """Render, POST, and parse a SOAP operation."""
+    async def call(
+        self, service: SoapService, operation: str, params: dict[str, Any], *, write: bool = False
+    ) -> Any:
+        """Render, POST, and parse a SOAP operation.
+
+        Pass ``write=True`` for mutating operations; they are refused unless writes are
+        enabled (``RSGE_ALLOW_WRITES``).
+        """
+        if write and not self._settings.allow_writes:
+            raise RsgeWriteBlockedError(
+                f"refusing SOAP {operation}: server is read-only — "
+                "set RSGE_ALLOW_WRITES=1 to enable writes"
+            )
         envelope = self.build_request(service, operation, params)
         headers = {
             "Content-Type": "text/xml; charset=utf-8",

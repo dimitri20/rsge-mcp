@@ -31,8 +31,23 @@ async def post_json(
         raise RsgeHttpError(f"request to {url} failed: {exc}") from exc
 
     if resp.status_code != 200:
-        raise RsgeHttpError(f"{url} returned HTTP {resp.status_code}", status_code=resp.status_code)
+        raise RsgeHttpError(
+            f"{url} returned HTTP {resp.status_code}",
+            status_code=resp.status_code,
+            retry_after=_retry_after(resp),
+        )
     try:
         return resp.json()
     except ValueError as exc:
         raise RsgeHttpError(f"{url} returned a non-JSON body") from exc
+
+
+def _retry_after(resp: httpx.Response) -> float | None:
+    """Parse a Retry-After header in seconds (HTTP-date form is ignored)."""
+    raw = resp.headers.get("Retry-After")
+    if not raw:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None

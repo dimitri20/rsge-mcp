@@ -17,7 +17,13 @@ from typing import Any
 import httpx
 
 from ..config import Settings
-from ..errors import INVALID_TOKEN, RsgeAuthError, RsgeHttpError, RsgeTimeoutError
+from ..errors import (
+    INVALID_TOKEN,
+    RsgeAuthError,
+    RsgeHttpError,
+    RsgeTimeoutError,
+    RsgeWriteBlockedError,
+)
 from ..logging import get_logger
 from ._http import JSON_HEADERS, post_json
 from .auth import EapiSession
@@ -27,7 +33,7 @@ from .rate_limit import RateLimiter
 log = get_logger("client")
 
 MAX_READ_RETRIES = 2
-RETRYABLE_STATUS = frozenset({502, 503, 504})
+RETRYABLE_STATUS = frozenset({429, 502, 503, 504})
 _BACKOFFS = (0.5, 1.5)
 
 
@@ -55,8 +61,18 @@ class RestClient:
         auth: bool = True,
         retry_reads: bool = True,
         base: str | None = None,
+        write: bool = False,
     ) -> Any:
-        """POST to ``path`` and return the unwrapped ``DATA``."""
+        """POST to ``path`` and return the unwrapped ``DATA``.
+
+        Pass ``write=True`` for mutating calls; they are refused unless writes are
+        enabled (``RSGE_ALLOW_WRITES``).
+        """
+        if write and not self._settings.allow_writes:
+            raise RsgeWriteBlockedError(
+                f"refusing to call {path}: server is read-only — "
+                "set RSGE_ALLOW_WRITES=1 to enable writes"
+            )
         try:
             return await self._attempt(path, body, auth=auth, retry_reads=retry_reads, base=base)
         except RsgeAuthError as exc:
@@ -100,6 +116,9 @@ class RestClient:
                     raise
                 last = exc
             if i < attempts - 1:
-                await self._sleep(_BACKOFFS[min(i, len(_BACKOFFS) - 1)])
+                delay = _BACKOFFS[min(i, len(_BACKOFFS) - 1)]
+                if isinstance(last, RsgeHttpError) and last.retry_after:
+                    delay = max(delay, last.retry_after)  # honor a 429 Retry-After
+                await self._sleep(delay)
         assert last is not None
         raise last

@@ -30,6 +30,13 @@ class RsgeConfigError(RsgeError):
     """Missing or invalid configuration / credentials."""
 
 
+class RsgeWriteBlockedError(RsgeError):
+    """A mutating operation was attempted while the server is in read-only mode.
+
+    The server defaults to read-only; set ``RSGE_ALLOW_WRITES=1`` to permit writes.
+    """
+
+
 class RsgeEnvelopeError(RsgeError):
     """The API returned a non-success ``STATUS.ID``."""
 
@@ -60,8 +67,11 @@ class RsgePinRequiredError(RsgeError):
 class RsgeHttpError(RsgeError):
     """Non-200 HTTP response or transport-level failure."""
 
-    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+    def __init__(
+        self, message: str, *, status_code: int | None = None, retry_after: float | None = None
+    ) -> None:
         self.status_code = status_code
+        self.retry_after = retry_after  # seconds, from a Retry-After header (e.g. on 429)
         super().__init__(message)
 
 

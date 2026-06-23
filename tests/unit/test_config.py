@@ -83,6 +83,20 @@ def test_soap_base_blank_is_none() -> None:
     assert load_settings({"RSGE_ENV": "test", "RSGE_SOAP_BASE": "  "}).hosts.soap_base is None
 
 
+def test_allow_writes_defaults_false() -> None:
+    assert load_settings({"RSGE_ENV": "test"}).allow_writes is False
+
+
+@pytest.mark.parametrize("value", ["1", "true", "TRUE", "yes", "on"])
+def test_allow_writes_truthy(value: str) -> None:
+    assert load_settings({"RSGE_ENV": "test", "RSGE_ALLOW_WRITES": value}).allow_writes is True
+
+
+@pytest.mark.parametrize("value", ["0", "false", "", "  ", "no"])
+def test_allow_writes_falsy(value: str) -> None:
+    assert load_settings({"RSGE_ENV": "test", "RSGE_ALLOW_WRITES": value}).allow_writes is False
+
+
 def test_bad_number_raises() -> None:
     with pytest.raises(RsgeConfigError):
         load_settings({"RSGE_ENV": "test", "RSGE_HTTP_TIMEOUT": "abc"})

@@ -59,6 +59,7 @@ class Settings:
     soap_password: str | None
     http_timeout: float
     rate_delay_ms: int
+    allow_writes: bool = False
 
     @property
     def is_test(self) -> bool:
@@ -79,6 +80,11 @@ def _clean(value: str | None) -> str | None:
         return None
     value = value.strip()
     return value or None
+
+
+def _flag(value: str | None) -> bool:
+    """Parse a boolean env flag: '1'/'true'/'yes'/'on' (case-insensitive) -> True."""
+    return (value or "").strip().lower() in ("1", "true", "yes", "on")
 
 
 def _parse_float(raw: str, name: str) -> float:
@@ -146,4 +152,5 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         soap_password=_clean(environ.get("RSGE_SOAP_PASSWORD")),
         http_timeout=http_timeout,
         rate_delay_ms=rate_delay_ms,
+        allow_writes=_flag(environ.get("RSGE_ALLOW_WRITES")),
     )

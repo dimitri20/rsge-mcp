@@ -25,6 +25,9 @@ def settings() -> Settings:
         soap_password=None,
         http_timeout=5.0,
         rate_delay_ms=0,
+        # Writes enabled so tool-mechanics tests can exercise write tools. The read-only
+        # default and the write guard are tested explicitly in test_write_guard.py.
+        allow_writes=True,
     )
 
 
