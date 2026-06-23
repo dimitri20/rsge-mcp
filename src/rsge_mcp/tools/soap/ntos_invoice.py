@@ -148,7 +148,7 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
                 "sp": su.sp,
             }
         )
-        return await ctx.soap.call(NTOS, "save_invoice", params)
+        return await ctx.soap.call(NTOS, "save_invoice", params, write=True)
 
     @mcp.tool()
     async def rsge_ntos_save_invoice_desc(
@@ -189,7 +189,7 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
                 "akciz_id": akciz_id,
             }
         )
-        return await ctx.soap.call(NTOS, "save_invoice_desc", params)
+        return await ctx.soap.call(NTOS, "save_invoice_desc", params, write=True)
 
     @mcp.tool()
     async def rsge_ntos_change_invoice_status(
@@ -210,4 +210,5 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
                 "su": su.su,
                 "sp": su.sp,
             },
+            write=True,
         )

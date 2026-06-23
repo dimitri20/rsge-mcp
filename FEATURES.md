@@ -134,6 +134,11 @@ server runs over **stdio** for any MCP client. Configure via env / `.env` (see `
 `RSGE_ENV`, `RSGE_EAPI_USERNAME`/`PASSWORD`, `RSGE_SOAP_USER`/`TIN`/`PASSWORD`, and the test-host
 overrides `RSGE_SOAP_BASE` / `RSGE_XDATA_BASE`.
 
+> 🔒 **Read-only by default.** Every mutating tool (issue/confirm/cancel invoices,
+> create/activate/close/delete waybills, change status) is **refused** unless you set
+> `RSGE_ALLOW_WRITES=1`. Reads always work. This makes it safe to point the server at production
+> for lookups without any risk of an accidental write.
+
 ---
 
 ## Maturity / verification status

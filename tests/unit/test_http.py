@@ -45,3 +45,13 @@ async def test_non_json_body_raises() -> None:
         async with httpx.AsyncClient() as http:
             with pytest.raises(RsgeHttpError):
                 await post_json(http, URL, {}, {}, 1.0)
+
+
+async def test_retry_after_parsed_on_429() -> None:
+    with respx.mock as router:
+        router.post(URL).mock(return_value=httpx.Response(429, headers={"Retry-After": "7"}))
+        async with httpx.AsyncClient() as http:
+            with pytest.raises(RsgeHttpError) as exc:
+                await post_json(http, URL, {}, {}, 1.0)
+        assert exc.value.status_code == 429
+        assert exc.value.retry_after == 7.0

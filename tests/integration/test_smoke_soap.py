@@ -53,6 +53,7 @@ def _settings_for(user: str, tin: str, password: str = "123456") -> Settings:
             "RSGE_SOAP_USER": user,
             "RSGE_SOAP_TIN": tin,
             "RSGE_SOAP_PASSWORD": password,
+            "RSGE_ALLOW_WRITES": "1",  # this test is already gated on RSGE_ALLOW_WRITES=1
         }
     )
 

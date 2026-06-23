@@ -155,7 +155,10 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
         if extra:
             waybill.update(extra)
         return await ctx.soap.call(
-            WAYBILL, "save_waybill", {"su": su.su, "sp": su.sp, "waybill": {"WAYBILL": waybill}}
+            WAYBILL,
+            "save_waybill",
+            {"su": su.su, "sp": su.sp, "waybill": {"WAYBILL": waybill}},
+            write=True,
         )
 
     @mcp.tool()
@@ -163,7 +166,10 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
         """Activate a waybill for transport (SOAP). WRITE — not auto-retried."""
         su = service_user_or_raise(ctx.settings)
         return await ctx.soap.call(
-            WAYBILL, "send_waybill", {"su": su.su, "sp": su.sp, "waybill_id": waybill_id}
+            WAYBILL,
+            "send_waybill",
+            {"su": su.su, "sp": su.sp, "waybill_id": waybill_id},
+            write=True,
         )
 
     @mcp.tool()
@@ -171,7 +177,10 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
         """Close/complete a waybill (SOAP). WRITE — not auto-retried."""
         su = service_user_or_raise(ctx.settings)
         return await ctx.soap.call(
-            WAYBILL, "close_waybill", {"su": su.su, "sp": su.sp, "waybill_id": waybill_id}
+            WAYBILL,
+            "close_waybill",
+            {"su": su.su, "sp": su.sp, "waybill_id": waybill_id},
+            write=True,
         )
 
     @mcp.tool()
@@ -184,5 +193,8 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
         """
         su = service_user_or_raise(ctx.settings)
         return await ctx.soap.call(
-            WAYBILL, "del_waybill", {"su": su.su, "sp": su.sp, "waybill_id": waybill_id}
+            WAYBILL,
+            "del_waybill",
+            {"su": su.su, "sp": su.sp, "waybill_id": waybill_id},
+            write=True,
         )

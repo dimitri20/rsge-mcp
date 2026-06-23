@@ -103,8 +103,13 @@ MCP; tool modules know nothing about HTTP wire details.
 - `errors.py` — `RsgeError` hierarchy; `STATUS.ID` → exception, surfacing the Georgian `TEXT`
   verbatim plus an English gloss for known codes.
 
-Writes (`Save*`, `send`/`close`, invoice lifecycle) are never auto-retried — duplicate
-invoices/waybills have legal consequences.
+**Read-only by default (safety):** the server refuses every mutating operation unless
+`RSGE_ALLOW_WRITES` is set. Write tools pass `write=True` to `RestClient.post` /
+`SoapClient.call`, which raise `RsgeWriteBlockedError` before any network call when
+`settings.allow_writes` is false. A parametrized fail-closed test
+(`tests/unit/test_write_guard.py`) asserts all 11 write tools are blocked in read-only mode —
+add new write tools there. Writes are also never auto-retried (duplicate invoices/waybills have
+legal consequences); reads retry on 429/502/503/504 honoring `Retry-After`.
 
 **SOAP layer (`soap/`, Phase 2):** `client.py` renders a SOAP 1.1 envelope, POSTs `text/xml` with
 the `SOAPAction` header, and parses the response; `build.py` serializes request XML
