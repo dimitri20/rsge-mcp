@@ -102,6 +102,14 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
         driver_tin: str = "",
         transport_cost: float | None = None,
         comment: str = "",
+        buyer_name: str | None = None,
+        driver_name: str | None = None,
+        begin_date: str | None = None,
+        trans_id: int | None = None,
+        chek_buyer_tin: int | None = None,
+        chek_driver_tin: int | None = None,
+        full_amount: float | None = None,
+        tran_cost_payer: int | None = None,
         extra: dict[str, Any] | None = None,
     ) -> Any:
         """Create or save a waybill (SOAP WayBillService).
@@ -109,9 +117,15 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
         - `waybill_type`: waybill TYPE code (see rs.ge waybill types).
         - `seller_un_id`: the seller's un_id (from chek_service_user).
         - `goods`: line items; each needs W_NAME, UNIT_ID, QUANTITY, PRICE.
+        - `begin_date`: transport start, ISO 8601 ('YYYY-MM-DDTHH:MM:SS').
+        - `trans_id`: transport type id (e.g. 2 = road).
+        - `chek_buyer_tin` / `chek_driver_tin`: 1 to validate the TIN against the registry.
+        - `full_amount`: total amount; `tran_cost_payer`: who pays transport (rs.ge code).
         - `extra`: merged into the WAYBILL object for fields not exposed here.
 
-        WRITE — never auto-retried. Returns the saved waybill id.
+        Most of the optional fields above are required by the server for a valid draft;
+        omitted (None) fields are simply not sent. WRITE — never auto-retried. Saves a
+        draft (STATUS=0, no number assigned until send/activate). Returns the saved id.
         """
         su = service_user_or_raise(ctx.settings)
         waybill = compact(
@@ -120,13 +134,21 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
                 "ID": 0,
                 "TYPE": waybill_type,
                 "BUYER_TIN": buyer_tin,
-                "SELER_UN_ID": seller_un_id,  # rs.ge's spelling
+                "CHEK_BUYER_TIN": chek_buyer_tin,  # rs.ge's spelling
+                "BUYER_NAME": buyer_name,
                 "START_ADDRESS": start_address,
                 "END_ADDRESS": end_address,
                 "DRIVER_TIN": driver_tin,
-                "CAR_NUMBER": car_number,
+                "CHEK_DRIVER_TIN": chek_driver_tin,
+                "DRIVER_NAME": driver_name,
                 "TRANSPORT_COAST": transport_cost,  # rs.ge's spelling
                 "STATUS": 0,
+                "SELER_UN_ID": seller_un_id,  # rs.ge's spelling
+                "FULL_AMOUNT": full_amount,
+                "CAR_NUMBER": car_number,
+                "BEGIN_DATE": begin_date,
+                "TRAN_COST_PAYER": tran_cost_payer,
+                "TRANS_ID": trans_id,
                 "COMMENT": comment,
             }
         )
@@ -150,4 +172,17 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
         su = service_user_or_raise(ctx.settings)
         return await ctx.soap.call(
             WAYBILL, "close_waybill", {"su": su.su, "sp": su.sp, "waybill_id": waybill_id}
+        )
+
+    @mcp.tool()
+    async def rsge_del_waybill(waybill_id: int) -> Any:
+        """Delete a waybill by id (SOAP WayBillService).
+
+        Only the owning service-user can delete, and typically only drafts (STATUS=0).
+        Returns an int code: 1=deleted, -1=not deleted, -101=belongs to another user,
+        -100=bad service-user/password. WRITE — never auto-retried.
+        """
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(
+            WAYBILL, "del_waybill", {"su": su.su, "sp": su.sp, "waybill_id": waybill_id}
         )

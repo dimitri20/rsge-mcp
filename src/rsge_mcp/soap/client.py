@@ -7,6 +7,7 @@ HTTP 500 with a fault body, so 500 is passed to ``parse`` which surfaces the fau
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 
@@ -19,6 +20,24 @@ from .parse import parse
 from .services import SoapService
 
 log = get_logger("soap.client")
+
+
+def _apply_soap_base(endpoint: str, soap_base: str | None) -> str:
+    """Rewrite the scheme+netloc of ``endpoint`` to ``soap_base``, keeping path/query.
+
+    Lets ``RSGE_SOAP_BASE`` point SOAP calls at a test host (e.g. services-test.rs.ge)
+    while preserving each service's own ``.asmx`` path. ``soap_base`` may be a bare host,
+    a scheme+host, or carry a trailing slash — only its scheme and netloc are used.
+    """
+    if not soap_base:
+        return endpoint
+    ep = urlsplit(endpoint)
+    base = urlsplit(soap_base if "//" in soap_base else f"//{soap_base}")
+    # A bare host (no scheme) lands in base.path, not base.netloc.
+    return urlunsplit(
+        (base.scheme or ep.scheme, base.netloc or base.path, ep.path, ep.query, ep.fragment)
+    )
+
 
 _ENVELOPE = (
     '<?xml version="1.0" encoding="utf-8"?>'
@@ -50,10 +69,11 @@ class SoapClient:
             "Content-Type": "text/xml; charset=utf-8",
             "SOAPAction": f'"{service.namespace}{operation}"',
         }
+        target = _apply_soap_base(service.endpoint, self._settings.hosts.soap_base)
         await self._rate.acquire()
         try:
             resp = await self._http.post(
-                service.endpoint,
+                target,
                 content=envelope.encode("utf-8"),
                 headers=headers,
                 timeout=self._settings.http_timeout,

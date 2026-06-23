@@ -49,8 +49,9 @@ Newer services (Tax Document/eAPI, Employee registry, Customs, Taxpayer public i
 `{ "DATA": …, "STATUS": { "ID": 0, "TEXT": "…" } }`. The customs doc even ships an **OpenAPI spec**
 (Redocly-generated HTML).
 
-> **Environments:** production is `eapi.rs.ge` / `services.rs.ge`; the SPA bundle also references a
-> test host `etest1.rs.ge`. The SOAP services expose `?WSDL` for machine-readable contracts.
+> **Environments:** production is `eapi.rs.ge` / `services.rs.ge`. The live **test hosts** (verified)
+> are `services-test.rs.ge` (SOAP) and `xdata-test.rs.ge` (REST); the `etest1.rs.ge` name in the SPA
+> bundle is dead (NXDOMAIN). The SOAP services expose `?WSDL` for machine-readable contracts.
 
 ---
 
@@ -163,7 +164,7 @@ The "create an rs.ge MCP" goal will need to bridge **two transports**:
 - **Out of scope for an HTTP MCP:** SAM module (#8, smartcard hardware protocol) and the desktop apps.
 
 **Open questions to resolve before building:** which auth credentials the user will supply (service user
-vs eAPI login), prod vs `etest1.rs.ge` test environment, and rate-limit / fair-use expectations (these
+vs eAPI login), prod vs the `services-test.rs.ge` / `xdata-test.rs.ge` test environment, and rate-limit / fair-use expectations (these
 are live government endpoints).
 
 ---
