@@ -129,11 +129,14 @@ many-optional-filter ops while staying fully hand-written.)
   keys `build_inventory.py` looks up in `SOAP_META` — both currently list the same six
   (waybill, ntos, specinvoices, dutyfree, taxpayer, custompost). Adding a SOAP service means editing
   both tables.
-- Environments: production is `eapi.rs.ge` / `services.rs.ge`; a test host `etest1.rs.ge` is referenced
-  by the SPA. Confirm which the user wants before any live integration work.
+- Environments: production is `eapi.rs.ge` / `services.rs.ge`. The **live test hosts** (verified) are
+  `services-test.rs.ge` (SOAP) and `xdata-test.rs.ge` (REST) — reach them with `RSGE_SOAP_BASE` /
+  `RSGE_XDATA_BASE`. (The `etest1.rs.ge` name the web SPA references is dead / NXDOMAIN.) The eAPI
+  invoice surface has no separate test host — its "test mode" runs on production `eapi.rs.ge` with the
+  public test account, so writes there must stay draft-only (`Save` → `Delete`, never `Activate`).
 - MCP server single-invoice lifecycle tools (`rsge_confirm_invoice` / `refuse` / `cancel`) send
   `{"ID": n}`; the exact key is thin in the docs (`GetInvoice` uses `InvoiceID`) — confirm against
-  `etest1` during live testing. See the note in `src/rsge_mcp/tools/invoice.py`.
+  the test host during live testing. See the note in `src/rsge_mcp/tools/invoice.py`.
 - Real eAPI accounts with SMS 2FA need `RSGE_2FA_MODE=tool` (exposes an `rsge_submit_pin` tool); the
   public test account is 2FA-off, so the default `off` mode is fine for development.
 - SOAP request **element order matters** (XSD sequences) and must follow the WSDL — e.g. `su`/`sp`

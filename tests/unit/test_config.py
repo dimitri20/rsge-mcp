@@ -62,12 +62,25 @@ def test_host_overrides_and_trailing_slash_stripped() -> None:
     s = load_settings(
         {
             "RSGE_ENV": "test",
-            "RSGE_EAPI_BASE": "https://etest1.rs.ge/",
-            "RSGE_XDATA_BASE": "https://x/",
+            "RSGE_EAPI_BASE": "https://eapi.example/",
+            "RSGE_XDATA_BASE": "https://xdata-test.rs.ge/",
         }
     )
-    assert s.hosts.eapi_base == "https://etest1.rs.ge"
-    assert s.hosts.xdata_base == "https://x"
+    assert s.hosts.eapi_base == "https://eapi.example"
+    assert s.hosts.xdata_base == "https://xdata-test.rs.ge"
+
+
+def test_soap_base_override_strips_trailing_slash() -> None:
+    s = load_settings({"RSGE_ENV": "test", "RSGE_SOAP_BASE": "https://services-test.rs.ge/"})
+    assert s.hosts.soap_base == "https://services-test.rs.ge"
+
+
+def test_soap_base_defaults_to_none() -> None:
+    assert load_settings({"RSGE_ENV": "test"}).hosts.soap_base is None
+
+
+def test_soap_base_blank_is_none() -> None:
+    assert load_settings({"RSGE_ENV": "test", "RSGE_SOAP_BASE": "  "}).hosts.soap_base is None
 
 
 def test_bad_number_raises() -> None:

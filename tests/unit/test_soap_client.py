@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 import httpx
 import pytest
 import respx
@@ -9,7 +11,7 @@ import respx
 from helpers import soap_diffgram, soap_fault
 from rsge_mcp.errors import RsgeError, RsgeHttpError, RsgeTimeoutError
 from rsge_mcp.rest.rate_limit import RateLimiter
-from rsge_mcp.soap.client import SoapClient
+from rsge_mcp.soap.client import SoapClient, _apply_soap_base
 from rsge_mcp.soap.services import WAYBILL
 
 # asyncio_mode=auto runs the async tests; the module mixes one sync test, so don't
@@ -21,6 +23,31 @@ ENDPOINT = WAYBILL.endpoint
 
 def _client(settings, http):
     return SoapClient(settings, http, RateLimiter(0.0))
+
+
+def test_apply_soap_base_none_returns_endpoint() -> None:
+    assert _apply_soap_base(ENDPOINT, None) == ENDPOINT
+
+
+def test_apply_soap_base_bare_host_inherits_scheme_keeps_path() -> None:
+    assert (
+        _apply_soap_base(ENDPOINT, "services-test.rs.ge")
+        == "https://services-test.rs.ge/WayBillService/WayBillService.asmx"
+    )
+
+
+def test_apply_soap_base_scheme_and_trailing_slash() -> None:
+    assert (
+        _apply_soap_base(ENDPOINT, "https://services-test.rs.ge/")
+        == "https://services-test.rs.ge/WayBillService/WayBillService.asmx"
+    )
+
+
+def test_apply_soap_base_preserves_query() -> None:
+    assert (
+        _apply_soap_base("https://services.rs.ge/x.asmx?WSDL", "https://services-test.rs.ge")
+        == "https://services-test.rs.ge/x.asmx?WSDL"
+    )
 
 
 def test_build_request_wraps_envelope(settings) -> None:
@@ -73,3 +100,21 @@ async def test_call_timeout_maps(settings) -> None:
         async with httpx.AsyncClient() as http:
             with pytest.raises(RsgeTimeoutError):
                 await _client(settings, http).call(WAYBILL, "get_waybill", {"su": "u", "sp": "p"})
+
+
+async def test_call_routes_to_soap_base_override(settings) -> None:
+    cfg = dataclasses.replace(
+        settings,
+        hosts=dataclasses.replace(settings.hosts, soap_base="https://services-test.rs.ge"),
+    )
+    test_url = "https://services-test.rs.ge/WayBillService/WayBillService.asmx"
+    with respx.mock as router:
+        prod = router.post(ENDPOINT).mock(
+            return_value=httpx.Response(200, text=soap_diffgram("get_waybills", "W", []))
+        )
+        test = router.post(test_url).mock(
+            return_value=httpx.Response(200, text=soap_diffgram("get_waybills", "W", []))
+        )
+        async with httpx.AsyncClient() as http:
+            await _client(cfg, http).call(WAYBILL, "get_waybills", {"su": "u", "sp": "p"})
+        assert test.called and not prod.called

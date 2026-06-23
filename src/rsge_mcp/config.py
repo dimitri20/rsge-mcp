@@ -33,10 +33,16 @@ class TwoFactorMode(StrEnum):
 
 @dataclass(frozen=True)
 class Hosts:
-    """Base URLs, overridable to point at a test host (e.g. etest1.rs.ge)."""
+    """Base URLs, overridable to point at the rs.ge test hosts.
+
+    The live test hosts are ``services-test.rs.ge`` (SOAP) and ``xdata-test.rs.ge`` (REST).
+    ``soap_base`` is optional because SOAP endpoints are full URLs in ``soap/services.py``;
+    ``None`` means "use the production endpoint as-is".
+    """
 
     eapi_base: str = DEFAULT_EAPI_BASE
     xdata_base: str = DEFAULT_XDATA_BASE
+    soap_base: str | None = None
 
 
 @dataclass(frozen=True)
@@ -117,9 +123,11 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
     if two_factor_mode is TwoFactorMode.STATIC_PIN and not pin:
         raise RsgeConfigError("RSGE_2FA_MODE=static_pin requires RSGE_PIN to be set")
 
+    soap_base = _clean(environ.get("RSGE_SOAP_BASE"))
     hosts = Hosts(
         eapi_base=(environ.get("RSGE_EAPI_BASE") or DEFAULT_EAPI_BASE).rstrip("/"),
         xdata_base=(environ.get("RSGE_XDATA_BASE") or DEFAULT_XDATA_BASE).rstrip("/"),
+        soap_base=soap_base.rstrip("/") if soap_base else None,
     )
 
     http_timeout = _parse_float(environ.get("RSGE_HTTP_TIMEOUT") or "30", "RSGE_HTTP_TIMEOUT")

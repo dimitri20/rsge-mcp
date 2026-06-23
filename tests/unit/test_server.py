@@ -29,6 +29,7 @@ EXPECTED_TOOLS = {
     "rsge_save_waybill",
     "rsge_send_waybill",
     "rsge_close_waybill",
+    "rsge_del_waybill",
     "rsge_ntos_check_service_user",
     "rsge_ntos_get_invoice",
     "rsge_ntos_get_seller_invoices",

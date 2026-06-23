@@ -61,6 +61,84 @@ async def test_save_waybill_builds_nested_goods(soap_settings) -> None:
         assert "<SELER_UN_ID>731937</SELER_UN_ID>" in body  # rs.ge spelling preserved
 
 
+async def test_save_waybill_emits_new_optional_fields(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(WAYBILL.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_scalar("save_waybill", save_waybillResult="1")
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            waybill.register(fake, ctx)
+            await fake.tools["rsge_save_waybill"](
+                waybill_type=2,
+                buyer_tin="123",
+                seller_un_id=731937,
+                start_address="A",
+                end_address="B",
+                goods=[WaybillGood(W_NAME="X", UNIT_ID=1, QUANTITY=1, PRICE=1.0)],
+                buyer_name="Buyer Co",
+                begin_date="2026-06-23T10:00:00",
+                chek_buyer_tin=1,
+                full_amount=5.0,
+                trans_id=2,
+            )
+        body = _content(route)
+        assert "<BUYER_NAME>Buyer Co</BUYER_NAME>" in body
+        assert "<BEGIN_DATE>2026-06-23T10:00:00</BEGIN_DATE>" in body
+        assert "<CHEK_BUYER_TIN>1</CHEK_BUYER_TIN>" in body
+        assert "<FULL_AMOUNT>5.0</FULL_AMOUNT>" in body
+        assert "<TRANS_ID>2</TRANS_ID>" in body
+
+
+async def test_save_waybill_omits_unset_optional_fields(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(WAYBILL.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_scalar("save_waybill", save_waybillResult="1")
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            waybill.register(fake, ctx)
+            await fake.tools["rsge_save_waybill"](
+                waybill_type=2,
+                buyer_tin="123",
+                seller_un_id=731937,
+                start_address="A",
+                end_address="B",
+                goods=[WaybillGood(W_NAME="X", UNIT_ID=1, QUANTITY=1, PRICE=1.0)],
+            )
+        body = _content(route)
+        for tag in ("BUYER_NAME", "DRIVER_NAME", "BEGIN_DATE", "FULL_AMOUNT", "TRANS_ID"):
+            assert f"<{tag}>" not in body  # None dropped by compact()
+
+
+async def test_del_waybill_sends_credentials_and_id(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(WAYBILL.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar("del_waybill", del_waybillResult="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            waybill.register(fake, ctx)
+            result = await fake.tools["rsge_del_waybill"](601759104)
+        assert result == {"del_waybillResult": "1"}
+        body = _content(route)
+        assert "<su>itana:206322102</su>" in body
+        assert "<waybill_id>601759104</waybill_id>" in body
+        assert body.index("<su>") < body.index("<sp>") < body.index("<waybill_id>")  # WSDL order
+
+
+async def test_del_waybill_requires_soap_credentials(settings) -> None:
+    async with make_ctx(settings) as ctx:  # no SOAP creds
+        fake = FakeMCP()
+        waybill.register(fake, ctx)
+        with pytest.raises(RsgeConfigError):
+            await fake.tools["rsge_del_waybill"](1)
+
+
 async def test_save_waybill_requires_soap_credentials(settings) -> None:
     async with make_ctx(settings) as ctx:  # no SOAP creds
         fake = FakeMCP()
