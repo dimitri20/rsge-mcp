@@ -24,7 +24,7 @@ pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 
 _DT = "01-01-2026 00:00:00"
 
-# Every mutating tool, with minimal valid arguments. Must list ALL 11 writes.
+# Every mutating tool, with minimal valid arguments. Must list ALL 19 writes.
 WRITE_CALLS = {
     "save_invoice": lambda t: t["rsge_save_invoice"](
         seller_tin="1",
@@ -66,6 +66,14 @@ WRITE_CALLS = {
     "ntos_change_invoice_status": lambda t: t["rsge_ntos_change_invoice_status"](
         invoice_id=1, status=2
     ),
+    "activate_invoice": lambda t: t["rsge_activate_invoice"](1),
+    "activate_invoices": lambda t: t["rsge_activate_invoices"]([1]),
+    "delete_invoice": lambda t: t["rsge_delete_invoice"](1),
+    "confirm_invoices": lambda t: t["rsge_confirm_invoices"]([1]),
+    "refuse_invoices": lambda t: t["rsge_refuse_invoices"]([1]),
+    "clear_barcodes": lambda t: t["rsge_clear_barcodes"](),
+    "get_seqnum": lambda t: t["rsge_get_seqnum"]("202601"),
+    "create_decl": lambda t: t["rsge_create_decl"]([1], "202601"),
 }
 
 
