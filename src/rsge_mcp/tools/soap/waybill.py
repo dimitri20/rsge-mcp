@@ -198,3 +198,197 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
             {"su": su.su, "sp": su.sp, "waybill_id": waybill_id},
             write=True,
         )
+
+    # --- reference catalogs (reads) ---
+    @mcp.tool()
+    async def rsge_get_waybill_types() -> Any:
+        """List valid waybill TYPE codes (SOAP WayBillService reference)."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(WAYBILL, "get_waybill_types", {"su": su.su, "sp": su.sp})
+
+    @mcp.tool()
+    async def rsge_get_waybill_units() -> Any:
+        """List measurement units for waybill goods (reference)."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(WAYBILL, "get_waybill_units", {"su": su.su, "sp": su.sp})
+
+    @mcp.tool()
+    async def rsge_get_transport_types() -> Any:
+        """List transport type codes for waybills (reference)."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(WAYBILL, "get_trans_types", {"su": su.su, "sp": su.sp})
+
+    @mcp.tool()
+    async def rsge_get_wood_types() -> Any:
+        """List wood/timber category codes (reference)."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(WAYBILL, "get_wood_types", {"su": su.su, "sp": su.sp})
+
+    @mcp.tool()
+    async def rsge_get_akciz_codes(search: str | None = None) -> Any:
+        """List excise (akciz) goods codes; `search` filters by text (reference)."""
+        su = service_user_or_raise(ctx.settings)
+        params: dict[str, Any] = {"su": su.su, "sp": su.sp}
+        params.update(compact({"s_text": search}))
+        return await ctx.soap.call(WAYBILL, "get_akciz_codes", params)
+
+    @mcp.tool()
+    async def rsge_get_waybill_error_codes() -> Any:
+        """List waybill error codes and their messages (reference)."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(WAYBILL, "get_error_codes", {"su": su.su, "sp": su.sp})
+
+    @mcp.tool()
+    async def rsge_get_bar_codes(barcode: str | None = None) -> Any:
+        """List the account's saved waybill barcodes; `barcode` filters (reference)."""
+        su = service_user_or_raise(ctx.settings)
+        params: dict[str, Any] = {"su": su.su, "sp": su.sp}
+        params.update(compact({"bar_code": barcode}))
+        return await ctx.soap.call(WAYBILL, "get_bar_codes", params)
+
+    @mcp.tool()
+    async def rsge_get_car_numbers() -> Any:
+        """List the account's saved vehicle (car) numbers (reference)."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(WAYBILL, "get_car_numbers", {"su": su.su, "sp": su.sp})
+
+    # --- lifecycle completers (writes) ---
+    @mcp.tool()
+    async def rsge_confirm_waybill(waybill_id: int) -> Any:
+        """Buyer-confirm a waybill by id (SOAP). WRITE — not auto-retried."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(
+            WAYBILL,
+            "confirm_waybill",
+            {"su": su.su, "sp": su.sp, "waybill_id": waybill_id},
+            write=True,
+        )
+
+    @mcp.tool()
+    async def rsge_reject_waybill(waybill_id: int) -> Any:
+        """Buyer-reject a waybill by id (SOAP). WRITE — not auto-retried."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(
+            WAYBILL,
+            "reject_waybill",
+            {"su": su.su, "sp": su.sp, "waybill_id": waybill_id},
+            write=True,
+        )
+
+    @mcp.tool()
+    async def rsge_ref_waybill(waybill_id: int) -> Any:
+        """Cancel (refuse) a waybill by id (SOAP). WRITE — not auto-retried."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(
+            WAYBILL,
+            "ref_waybill",
+            {"su": su.su, "sp": su.sp, "waybill_id": waybill_id},
+            write=True,
+        )
+
+    @mcp.tool()
+    async def rsge_close_waybill_vd(waybill_id: int, delivery_date: str) -> Any:
+        """Close a waybill with an explicit delivery date (SOAP). `delivery_date` is ISO
+        8601 ('YYYY-MM-DDTHH:MM:SS'). WRITE — not auto-retried."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(
+            WAYBILL,
+            "close_waybill_vd",
+            {"su": su.su, "sp": su.sp, "delivery_date": delivery_date, "waybill_id": waybill_id},
+            write=True,
+        )
+
+    @mcp.tool()
+    async def rsge_send_waybill_vd(waybill_id: int, begin_date: str) -> Any:
+        """Activate (send) a waybill with an explicit transport-start date (SOAP).
+        `begin_date` is ISO 8601. WRITE — not auto-retried."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(
+            WAYBILL,
+            "send_waybil_vd",  # rs.ge's spelling
+            {"su": su.su, "sp": su.sp, "begin_date": begin_date, "waybill_id": waybill_id},
+            write=True,
+        )
+
+    @mcp.tool()
+    async def rsge_ref_waybill_vd(waybill_id: int, comment: str | None = None) -> Any:
+        """Cancel a waybill with an optional reason `comment` (SOAP). WRITE — not auto-retried."""
+        su = service_user_or_raise(ctx.settings)
+        params: dict[str, Any] = {"su": su.su, "sp": su.sp, "waybill_id": waybill_id}
+        params.update(compact({"comment": comment}))
+        return await ctx.soap.call(WAYBILL, "ref_waybill_vd", params, write=True)
+
+    # --- identity helpers (reads) ---
+    @mcp.tool()
+    async def rsge_get_name_from_tin(tin: str) -> Any:
+        """Look up a taxpayer's name by TIN (SOAP WayBillService)."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(
+            WAYBILL, "get_name_from_tin", {"su": su.su, "sp": su.sp, "tin": tin}
+        )
+
+    @mcp.tool()
+    async def rsge_get_tin_from_un_id(un_id: int) -> Any:
+        """Resolve a TIN from an un_id (SOAP WayBillService)."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(
+            WAYBILL, "get_tin_from_un_id", {"su": su.su, "sp": su.sp, "un_id": un_id}
+        )
+
+    @mcp.tool()
+    async def rsge_get_payer_type_from_un_id(un_id: int) -> Any:
+        """Get a taxpayer's payer type from an un_id (SOAP WayBillService)."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(
+            WAYBILL, "get_payer_type_from_un_id", {"su": su.su, "sp": su.sp, "un_id": un_id}
+        )
+
+    @mcp.tool()
+    async def rsge_is_vat_payer(un_id: int) -> Any:
+        """Check whether an un_id is a VAT payer (SOAP WayBillService)."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(
+            WAYBILL, "is_vat_payer", {"su": su.su, "sp": su.sp, "un_id": un_id}
+        )
+
+    @mcp.tool()
+    async def rsge_is_vat_payer_tin(tin: str) -> Any:
+        """Check whether a TIN is a VAT payer (SOAP WayBillService)."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(
+            WAYBILL, "is_vat_payer_tin", {"su": su.su, "sp": su.sp, "tin": tin}
+        )
+
+    # --- single reads ---
+    @mcp.tool()
+    async def rsge_get_waybill_by_number(waybill_number: str) -> Any:
+        """Fetch a waybill by its assigned number (SOAP WayBillService)."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(
+            WAYBILL,
+            "get_waybill_by_number",
+            {"su": su.su, "sp": su.sp, "waybill_number": waybill_number},
+        )
+
+    @mcp.tool()
+    async def rsge_get_waybill_pdf(waybill_id: int) -> Any:
+        """Get the printable waybill as a base64-encoded PDF string (SOAP WayBillService)."""
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(
+            WAYBILL, "get_print_pdf", {"su": su.su, "sp": su.sp, "waybill_id": waybill_id}
+        )
+
+    # --- waybill -> VAT invoice (write) ---
+    @mcp.tool()
+    async def rsge_waybill_to_invoice(waybill_id: int, in_inv_id: int = 0) -> Any:
+        """Issue a VAT invoice from a waybill (SOAP WayBillService `save_invoice`).
+
+        `in_inv_id`: an existing invoice id to attach to (0 = new). WRITE — not auto-retried.
+        """
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(
+            WAYBILL,
+            "save_invoice",
+            {"su": su.su, "sp": su.sp, "waybill_id": waybill_id, "in_inv_id": in_inv_id},
+            write=True,
+        )
