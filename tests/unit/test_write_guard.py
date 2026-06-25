@@ -24,7 +24,7 @@ pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 
 _DT = "01-01-2026 00:00:00"
 
-# Every mutating tool, with minimal valid arguments. Must list ALL 27 writes.
+# Every mutating tool, with minimal valid arguments. Must list ALL 40 writes.
 WRITE_CALLS = {
     "save_invoice": lambda t: t["rsge_save_invoice"](
         seller_tin="1",
@@ -82,6 +82,34 @@ WRITE_CALLS = {
     "send_waybill_vd": lambda t: t["rsge_send_waybill_vd"](1, "2026-01-01T00:00:00"),
     "ref_waybill_vd": lambda t: t["rsge_ref_waybill_vd"](1),
     "waybill_to_invoice": lambda t: t["rsge_waybill_to_invoice"](1),
+    # ntos long-tail (P4)
+    "ntos_save_invoice_a": lambda t: t["rsge_ntos_save_invoice_a"](
+        invoice_id=1,
+        operation_date=_DT,
+        seller_un_id=1,
+        buyer_un_id=2,
+        overhead_dt=_DT,
+        b_s_user_id=1,
+    ),
+    "ntos_save_invoice_n": lambda t: t["rsge_ntos_save_invoice_n"](
+        invoice_id=1,
+        operation_date=_DT,
+        seller_un_id=1,
+        buyer_un_id=2,
+        overhead_dt=_DT,
+        b_s_user_id=1,
+    ),
+    "ntos_correct_invoice": lambda t: t["rsge_ntos_correct_invoice"](1, 1),
+    "ntos_cancel_invoice": lambda t: t["rsge_ntos_cancel_invoice"](1),
+    "ntos_delete_invoice_desc": lambda t: t["rsge_ntos_delete_invoice_desc"](1, 2),
+    "ntos_accept_invoice_status": lambda t: t["rsge_ntos_accept_invoice_status"](1, 2),
+    "ntos_refuse_invoice_status": lambda t: t["rsge_ntos_refuse_invoice_status"](1),
+    "ntos_attach_advance_invoice": lambda t: t["rsge_ntos_attach_advance_invoice"](1, 2, 3.0, 4),
+    "ntos_update_advance_invoice": lambda t: t["rsge_ntos_update_advance_invoice"](1, 2, 3.0),
+    "ntos_detach_advance_invoices": lambda t: t["rsge_ntos_detach_advance_invoices"](1, [2]),
+    "ntos_save_invoice_request": lambda t: t["rsge_ntos_save_invoice_request"](1, 2, 3, _DT),
+    "ntos_accept_invoice_request": lambda t: t["rsge_ntos_accept_invoice_request"](1, 2),
+    "ntos_del_invoice_request": lambda t: t["rsge_ntos_del_invoice_request"](1, 2),
 }
 
 
