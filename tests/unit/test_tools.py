@@ -130,7 +130,7 @@ async def test_confirm_invoice_sends_id(settings) -> None:
             fake = FakeMCP()
             invoice.register(fake, ctx)
             await fake.tools["rsge_confirm_invoice"](7)
-        assert _body(target) == {"ID": 7}
+        assert _body(target) == {"INVOICE": {"ID": 7}}
 
 
 async def test_get_vat_payer_status_body(settings) -> None:
@@ -176,7 +176,7 @@ async def test_invoice_lifecycle_sends_id(settings, tool_name, path) -> None:
             fake = FakeMCP()
             invoice.register(fake, ctx)
             await fake.tools[tool_name](42)
-        assert _body(target) == {"ID": 42}
+        assert _body(target) == {"INVOICE": {"ID": 42}}
 
 
 async def test_save_invoice_wait_polls_transaction(settings) -> None:
@@ -240,3 +240,117 @@ async def test_signout_invalidates_session(settings) -> None:
             assert ctx.session.has_token is False
         assert out.called
         assert msg == "Signed out."
+
+
+# --- P1: invoice lifecycle + reference tools ---
+
+
+async def _invoice_call(settings, tool, path, response, *args, **kwargs):
+    """Register the invoice module, call `tool`, return (returned_data, request_body)."""
+    with respx.mock as router:
+        _token_route(router)
+        target = router.post(f"https://eapi.rs.ge{path}").mock(
+            return_value=httpx.Response(200, json=env(response))
+        )
+        async with make_ctx(settings) as ctx:
+            fake = FakeMCP()
+            invoice.register(fake, ctx)
+            data = await fake.tools[tool](*args, **kwargs)
+        return data, _body(target)
+
+
+async def test_list_excise(settings) -> None:
+    data, body = await _invoice_call(
+        settings,
+        "rsge_list_excise",
+        "/Invoice/ListExcise",
+        {"Data": {"Rows": []}},
+        {"PRODUCT_NAME": "X"},
+    )
+    assert data == {"Data": {"Rows": []}}
+    assert body == {"PRODUCT_NAME": "X"}
+
+
+async def test_list_excise_empty_filters(settings) -> None:
+    _, body = await _invoice_call(settings, "rsge_list_excise", "/Invoice/ListExcise", {})
+    assert body == {}
+
+
+async def test_list_barcodes_empty_filters(settings) -> None:
+    _, body = await _invoice_call(settings, "rsge_list_barcodes", "/Invoice/ListBarCodes", {})
+    assert body == {}
+
+
+async def test_get_barcode_uses_camelcase_key(settings) -> None:
+    data, body = await _invoice_call(
+        settings, "rsge_get_barcode", "/Invoice/GetBarCode", {"RESULT": {"BARCODE": "55"}}, "55"
+    )
+    assert data == {"RESULT": {"BARCODE": "55"}}
+    assert body == {"barCode": "55"}
+
+
+async def test_list_goods_batch_body(settings) -> None:
+    _, body = await _invoice_call(
+        settings, "rsge_list_goods", "/Invoice/ListGoods", {"INVOICES": []}, [1137, 1138]
+    )
+    assert body == {"Invoices": [{"ID": 1137}, {"ID": 1138}]}
+
+
+async def test_get_actions(settings) -> None:
+    data, body = await _invoice_call(
+        settings, "rsge_get_actions", "/Invoice/GetActions", [{"ID": "3", "NAME": "active"}]
+    )
+    assert data == [{"ID": "3", "NAME": "active"}]
+    assert body == {}
+
+
+async def test_activate_invoice_single_ref(settings) -> None:
+    data, body = await _invoice_call(
+        settings,
+        "rsge_activate_invoice",
+        "/Invoice/ActivateInvoice",
+        {"INVOICE_ID": 918, "SELLER_ACTION": 1},
+        918,
+    )
+    assert body == {"INVOICE": {"ID": 918}}
+    assert data == {"INVOICE_ID": 918, "SELLER_ACTION": 1}
+
+
+async def test_delete_invoice_single_ref(settings) -> None:
+    _, body = await _invoice_call(
+        settings, "rsge_delete_invoice", "/Invoice/DeleteInvoice", {"SELLER_ACTION": -1}, 913
+    )
+    assert body == {"INVOICE": {"ID": 913}}
+
+
+async def test_clear_barcodes_empty_body(settings) -> None:
+    _, body = await _invoice_call(settings, "rsge_clear_barcodes", "/Invoice/ClearBarCodes", {})
+    assert body == {}
+
+
+async def test_get_seqnum_body(settings) -> None:
+    data, body = await _invoice_call(
+        settings, "rsge_get_seqnum", "/Invoice/GetSeqNum", {"SeqNum": "26466366"}, "201901"
+    )
+    assert body == {"OperationPeriod": "201901"}
+    assert data == {"SeqNum": "26466366"}
+
+
+async def test_create_decl_body(settings) -> None:
+    _, body = await _invoice_call(
+        settings, "rsge_create_decl", "/Invoice/CreateDecl", {}, [339], "201901"
+    )
+    assert body == {"Invoices": [{"ID": 339}], "OperationPeriod": "201901"}
+
+
+@pytest.mark.parametrize(
+    "tool,path",
+    [
+        ("rsge_activate_invoices", "/Invoice/ActivateInvoices"),
+        ("rsge_confirm_invoices", "/Invoice/ConfirmInvoices"),
+        ("rsge_refuse_invoices", "/Invoice/RefuseInvoices"),
+    ],
+)
+async def test_invoice_batch_ops(settings, tool, path) -> None:
+    _, body = await _invoice_call(settings, tool, path, {}, [917, 916])
+    assert body == {"Invoices": [{"ID": 917}, {"ID": 916}]}
