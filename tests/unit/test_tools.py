@@ -10,7 +10,7 @@ import respx
 
 from helpers import FakeMCP, env, make_ctx
 from rsge_mcp.models.invoice import InvoiceGood
-from rsge_mcp.tools import auth_tools, common, invoice, org, taxpayer_public
+from rsge_mcp.tools import auth_tools, common, customs, employees, invoice, org, taxpayer_public
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 
@@ -354,3 +354,108 @@ async def test_create_decl_body(settings) -> None:
 async def test_invoice_batch_ops(settings, tool, path) -> None:
     _, body = await _invoice_call(settings, tool, path, {}, [917, 916])
     assert body == {"Invoices": [{"ID": 917}, {"ID": 916}]}
+
+
+# --- P2: Employees + Customs ---
+
+
+async def test_get_countries(settings) -> None:
+    with respx.mock as router:
+        _token_route(router)
+        target = router.post("https://eapi.rs.ge/Employees/GetCountries").mock(
+            return_value=httpx.Response(200, json=env({"COUNTRIES": [{"country_id": "031"}]}))
+        )
+        async with make_ctx(settings) as ctx:
+            fake = FakeMCP()
+            employees.register(fake, ctx)
+            data = await fake.tools["rsge_get_countries"]({"COUNTRY_ID": "03"})
+        assert data == {"COUNTRIES": [{"country_id": "031"}]}
+        assert _body(target) == {"COUNTRY_ID": "03"}
+
+
+async def test_get_employee(settings) -> None:
+    with respx.mock as router:
+        _token_route(router)
+        target = router.post("https://eapi.rs.ge/Employees/GetEmployee").mock(
+            return_value=httpx.Response(200, json=env({"EMPLOYEE": {"ID": 1962}}))
+        )
+        async with make_ctx(settings) as ctx:
+            fake = FakeMCP()
+            employees.register(fake, ctx)
+            await fake.tools["rsge_get_employee"](1962)
+        assert _body(target) == {"ID": 1962}
+
+
+async def test_list_employees_empty_filters(settings) -> None:
+    with respx.mock as router:
+        _token_route(router)
+        target = router.post("https://eapi.rs.ge/Employees/ListEmployees").mock(
+            return_value=httpx.Response(200, json=env({"Data": {"Rows": []}}))
+        )
+        async with make_ctx(settings) as ctx:
+            fake = FakeMCP()
+            employees.register(fake, ctx)
+            await fake.tools["rsge_list_employees"]()
+        assert _body(target) == {}
+
+
+async def test_save_employee_georgian_compacts(settings) -> None:
+    with respx.mock as router:
+        _token_route(router)
+        target = router.post("https://eapi.rs.ge/Employees/SaveEmployee").mock(
+            return_value=httpx.Response(200, json=env({"ID": "5"}))
+        )
+        async with make_ctx(settings) as ctx:
+            fake = FakeMCP()
+            employees.register(fake, ctx)
+            data = await fake.tools["rsge_save_employee"](tin="123", phone="555", work_type=1)
+        assert data == {"ID": "5"}
+        body = _body(target)
+        assert body == {"ID": 0, "IS_FOREIGNER": 0, "TIN": "123", "PHONE": "555", "WORK_TYPE": 1}
+        for tag in ("FULLNAME", "GENDER", "BIRTH_DATE", "CITIZEN_COUNTRY_ID", "STATUS"):
+            assert tag not in body  # None dropped by compact()
+
+
+async def test_save_employee_foreigner_fields(settings) -> None:
+    with respx.mock as router:
+        _token_route(router)
+        target = router.post("https://eapi.rs.ge/Employees/SaveEmployee").mock(
+            return_value=httpx.Response(200, json=env({"ID": "6"}))
+        )
+        async with make_ctx(settings) as ctx:
+            fake = FakeMCP()
+            employees.register(fake, ctx)
+            await fake.tools["rsge_save_employee"](
+                tin="X12345",
+                phone="555",
+                work_type=1,
+                is_foreigner=1,
+                fullname="John Doe",
+                gender=1,
+                birth_date="19-10-1990",
+                citizen_country_id="040",
+                employee_id=6,
+            )
+        body = _body(target)
+        assert body["ID"] == 6 and body["IS_FOREIGNER"] == 1
+        assert body["FULLNAME"] == "John Doe" and body["CITIZEN_COUNTRY_ID"] == "040"
+
+
+async def test_get_customs_declarations_uses_get_with_body(settings) -> None:
+    with respx.mock as router:
+        _token_route(router)
+        target = router.get("https://eapi.rs.ge/CustomsDeclarations/GetAsycudaDeclarations").mock(
+            return_value=httpx.Response(200, json=env([{"CustomsCode": "11114"}]))
+        )
+        async with make_ctx(settings) as ctx:
+            fake = FakeMCP()
+            customs.register(fake, ctx)
+            data = await fake.tools["rsge_get_customs_declarations"](
+                "2024-06-20T00:00:00", "2024-06-23T00:00:00"
+            )
+        assert data == [{"CustomsCode": "11114"}]
+        assert target.calls.last.request.method == "GET"
+        assert _body(target) == {
+            "START_DATE": "2024-06-20T00:00:00",
+            "END_DATE": "2024-06-23T00:00:00",
+        }

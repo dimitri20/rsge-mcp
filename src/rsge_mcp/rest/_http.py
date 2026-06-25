@@ -21,10 +21,14 @@ async def post_json(
     body: dict[str, Any],
     headers: dict[str, str],
     timeout: float,
+    method: str = "POST",
 ) -> Any:
-    """POST ``body`` as JSON and return parsed JSON, or raise an RsgeError."""
+    """Send ``body`` as JSON (POST by default) and return parsed JSON, or raise RsgeError.
+
+    ``method`` allows GET-with-body, which a few rs.ge endpoints (customs) require.
+    """
     try:
-        resp = await http.post(url, json=body, headers=headers, timeout=timeout)
+        resp = await http.request(method, url, json=body, headers=headers, timeout=timeout)
     except httpx.TimeoutException as exc:
         raise RsgeTimeoutError(f"request to {url} timed out") from exc
     except httpx.HTTPError as exc:
