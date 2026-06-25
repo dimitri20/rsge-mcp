@@ -322,3 +322,198 @@ async def test_z_report_sum_scalar(soap_settings) -> None:
             )
         assert data == {"PaidCash": "100", "PaidOther": "50"}
         assert "<StartDate>2024-01-01T00:00:00</StartDate>" in _content(route)
+
+
+# --- P3: waybill long-tail ---
+
+
+@pytest.mark.parametrize(
+    "tool,op",
+    [
+        ("rsge_get_waybill_types", "get_waybill_types"),
+        ("rsge_get_waybill_units", "get_waybill_units"),
+        ("rsge_get_transport_types", "get_trans_types"),
+        ("rsge_get_wood_types", "get_wood_types"),
+        ("rsge_get_waybill_error_codes", "get_error_codes"),
+        ("rsge_get_car_numbers", "get_car_numbers"),
+    ],
+)
+async def test_waybill_reference_catalogs(soap_settings, tool, op) -> None:
+    with respx.mock as router:
+        route = router.post(WAYBILL.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_diffgram(op, "ROW", [{"ID": "1"}]))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            waybill.register(fake, ctx)
+            data = await fake.tools[tool]()
+        assert data == [{"ID": "1"}]
+        body = _content(route)
+        assert (
+            f'<{op} xmlns="http://tempuri.org/"><su>itana:206322102</su><sp>123456</sp></{op}>'
+            in body
+        )
+
+
+async def test_get_akciz_codes_search_filter(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(WAYBILL.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_diffgram("get_akciz_codes", "A", [{"CODE": "2207"}])
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            waybill.register(fake, ctx)
+            await fake.tools["rsge_get_akciz_codes"]("oil")
+        assert "<s_text>oil</s_text>" in _content(route)
+
+
+async def test_get_akciz_codes_omits_unset_filter(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(WAYBILL.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_diffgram("get_akciz_codes", "A", []))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            waybill.register(fake, ctx)
+            await fake.tools["rsge_get_akciz_codes"]()
+        assert "<s_text>" not in _content(route)
+
+
+async def test_get_bar_codes_filter(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(WAYBILL.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_diffgram("get_bar_codes", "B", []))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            waybill.register(fake, ctx)
+            await fake.tools["rsge_get_bar_codes"]("999")
+        assert "<bar_code>999</bar_code>" in _content(route)
+
+
+@pytest.mark.parametrize(
+    "tool,op",
+    [
+        ("rsge_confirm_waybill", "confirm_waybill"),
+        ("rsge_reject_waybill", "reject_waybill"),
+        ("rsge_ref_waybill", "ref_waybill"),
+    ],
+)
+async def test_waybill_lifecycle_single_id(soap_settings, tool, op) -> None:
+    with respx.mock as router:
+        route = router.post(WAYBILL.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar(op, Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            waybill.register(fake, ctx)
+            await fake.tools[tool](42)
+        body = _content(route)
+        assert "<waybill_id>42</waybill_id>" in body
+        assert body.index("<su>") < body.index("<sp>") < body.index("<waybill_id>")
+
+
+async def test_close_waybill_vd_date_before_id(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(WAYBILL.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar("close_waybill_vd", Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            waybill.register(fake, ctx)
+            await fake.tools["rsge_close_waybill_vd"](7, "2026-01-01T00:00:00")
+        body = _content(route)
+        assert "<delivery_date>2026-01-01T00:00:00</delivery_date>" in body
+        assert body.index("<delivery_date>") < body.index("<waybill_id>")  # WSDL order
+
+
+async def test_send_waybill_vd_date_before_id(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(WAYBILL.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar("send_waybil_vd", Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            waybill.register(fake, ctx)
+            await fake.tools["rsge_send_waybill_vd"](7, "2026-01-01T00:00:00")
+        body = _content(route)
+        assert "<begin_date>2026-01-01T00:00:00</begin_date>" in body
+        assert body.index("<begin_date>") < body.index("<waybill_id>")
+
+
+async def test_ref_waybill_vd_optional_comment(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(WAYBILL.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar("ref_waybill_vd", Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            waybill.register(fake, ctx)
+            await fake.tools["rsge_ref_waybill_vd"](7, "wrong address")
+        assert "<comment>wrong address</comment>" in _content(route)
+
+
+@pytest.mark.parametrize(
+    "tool,op,arg,tag,val",
+    [
+        ("rsge_get_name_from_tin", "get_name_from_tin", "123", "tin", "123"),
+        ("rsge_is_vat_payer_tin", "is_vat_payer_tin", "123", "tin", "123"),
+        ("rsge_get_tin_from_un_id", "get_tin_from_un_id", 7, "un_id", "7"),
+        ("rsge_get_payer_type_from_un_id", "get_payer_type_from_un_id", 7, "un_id", "7"),
+        ("rsge_is_vat_payer", "is_vat_payer", 7, "un_id", "7"),
+    ],
+)
+async def test_waybill_identity_helpers(soap_settings, tool, op, arg, tag, val) -> None:
+    with respx.mock as router:
+        route = router.post(WAYBILL.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar(op, Result=val))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            waybill.register(fake, ctx)
+            await fake.tools[tool](arg)
+        assert f"<{tag}>{val}</{tag}>" in _content(route)
+
+
+async def test_get_waybill_by_number(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(WAYBILL.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar("get_waybill_by_number", ID="5"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            waybill.register(fake, ctx)
+            await fake.tools["rsge_get_waybill_by_number"]("AA-000123")
+        assert "<waybill_number>AA-000123</waybill_number>" in _content(route)
+
+
+async def test_get_waybill_pdf(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(WAYBILL.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_scalar("get_print_pdf", get_print_pdfResult="JVBERi0=")
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            waybill.register(fake, ctx)
+            data = await fake.tools["rsge_get_waybill_pdf"](7)
+        assert data == {"get_print_pdfResult": "JVBERi0="}
+        assert "<waybill_id>7</waybill_id>" in _content(route)
+
+
+async def test_waybill_to_invoice_body(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(WAYBILL.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_scalar("save_invoice", save_invoiceResult="99")
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            waybill.register(fake, ctx)
+            await fake.tools["rsge_waybill_to_invoice"](7, in_inv_id=3)
+        body = _content(route)
+        assert "<waybill_id>7</waybill_id>" in body and "<in_inv_id>3</in_inv_id>" in body
