@@ -47,6 +47,19 @@ async def test_non_json_body_raises() -> None:
                 await post_json(http, URL, {}, {}, 1.0)
 
 
+async def test_method_get_with_body() -> None:
+    with respx.mock as router:
+        route = router.get(URL).mock(
+            return_value=httpx.Response(200, json={"DATA": [], "STATUS": {"ID": 0}})
+        )
+        async with httpx.AsyncClient() as http:
+            data = await post_json(http, URL, {"x": 1}, {}, 1.0, method="GET")
+        assert data == {"DATA": [], "STATUS": {"ID": 0}}
+        req = route.calls.last.request
+        assert req.method == "GET"
+        assert req.content  # body was sent with the GET
+
+
 async def test_retry_after_parsed_on_429() -> None:
     with respx.mock as router:
         router.post(URL).mock(return_value=httpx.Response(429, headers={"Retry-After": "7"}))

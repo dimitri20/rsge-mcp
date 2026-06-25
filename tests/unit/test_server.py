@@ -34,6 +34,12 @@ EXPECTED_TOOLS = {
     "rsge_clear_barcodes",
     "rsge_get_seqnum",
     "rsge_create_decl",
+    # Employees + Customs (P2)
+    "rsge_get_countries",
+    "rsge_get_employee",
+    "rsge_list_employees",
+    "rsge_save_employee",
+    "rsge_get_customs_declarations",
     "rsge_taxpayer_public_info",
     "rsge_signout",
     # SOAP (Phase 2)
@@ -51,6 +57,8 @@ EXPECTED_TOOLS = {
     "rsge_ntos_save_invoice",
     "rsge_ntos_save_invoice_desc",
     "rsge_ntos_change_invoice_status",
+    "rsge_get_z_report_details",
+    "rsge_get_z_report_sum",
 }
 
 

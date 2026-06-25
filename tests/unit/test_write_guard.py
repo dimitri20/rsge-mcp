@@ -17,14 +17,14 @@ from rsge_mcp.errors import RsgeWriteBlockedError
 from rsge_mcp.models.invoice import InvoiceGood
 from rsge_mcp.models.waybill import WaybillGood
 from rsge_mcp.soap.services import WAYBILL
-from rsge_mcp.tools import invoice
+from rsge_mcp.tools import employees, invoice
 from rsge_mcp.tools.soap import ntos_invoice, waybill
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 
 _DT = "01-01-2026 00:00:00"
 
-# Every mutating tool, with minimal valid arguments. Must list ALL 19 writes.
+# Every mutating tool, with minimal valid arguments. Must list ALL 20 writes.
 WRITE_CALLS = {
     "save_invoice": lambda t: t["rsge_save_invoice"](
         seller_tin="1",
@@ -74,11 +74,12 @@ WRITE_CALLS = {
     "clear_barcodes": lambda t: t["rsge_clear_barcodes"](),
     "get_seqnum": lambda t: t["rsge_get_seqnum"]("202601"),
     "create_decl": lambda t: t["rsge_create_decl"]([1], "202601"),
+    "save_employee": lambda t: t["rsge_save_employee"](tin="1", phone="5", work_type=1),
 }
 
 
 def _register_all(fake: FakeMCP, ctx) -> None:
-    for module in (invoice, waybill, ntos_invoice):
+    for module in (invoice, employees, waybill, ntos_invoice):
         module.register(fake, ctx)
 
 

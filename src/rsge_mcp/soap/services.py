@@ -27,3 +27,8 @@ NTOS = SoapService(
     name="ntosservice",
     endpoint="https://www.revenue.mof.ge/ntosservice/ntosservice.asmx",
 )
+
+TAXPAYER = SoapService(
+    name="taxpayerservice",
+    endpoint="https://services.rs.ge/taxservice/taxpayerservice.asmx",
+)

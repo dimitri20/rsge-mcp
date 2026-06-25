@@ -62,11 +62,12 @@ class RestClient:
         retry_reads: bool = True,
         base: str | None = None,
         write: bool = False,
+        method: str = "POST",
     ) -> Any:
-        """POST to ``path`` and return the unwrapped ``DATA``.
+        """Send a JSON request to ``path`` and return the unwrapped ``DATA``.
 
         Pass ``write=True`` for mutating calls; they are refused unless writes are
-        enabled (``RSGE_ALLOW_WRITES``).
+        enabled (``RSGE_ALLOW_WRITES``). ``method`` allows GET-with-body (customs).
         """
         if write and not self._settings.allow_writes:
             raise RsgeWriteBlockedError(
@@ -74,13 +75,15 @@ class RestClient:
                 "set RSGE_ALLOW_WRITES=1 to enable writes"
             )
         try:
-            return await self._attempt(path, body, auth=auth, retry_reads=retry_reads, base=base)
+            return await self._attempt(
+                path, body, auth=auth, retry_reads=retry_reads, base=base, method=method
+            )
         except RsgeAuthError as exc:
             if auth and exc.status_id == INVALID_TOKEN:
                 log.info("invalid token (-104); re-authenticating and retrying once")
                 self._session.invalidate()
                 return await self._attempt(
-                    path, body, auth=auth, retry_reads=retry_reads, base=base
+                    path, body, auth=auth, retry_reads=retry_reads, base=base, method=method
                 )
             raise
 
@@ -92,23 +95,31 @@ class RestClient:
         auth: bool,
         retry_reads: bool,
         base: str | None,
+        method: str,
     ) -> Any:
         headers = dict(JSON_HEADERS)
         if auth:
             headers["Authorization"] = f"bearer {await self._session.get_token()}"
         url = (base or self._settings.hosts.eapi_base) + path
-        raw = await self._send(url, body or {}, headers, retry_reads)
+        raw = await self._send(url, body or {}, headers, retry_reads, method)
         return unwrap(raw)
 
     async def _send(
-        self, url: str, body: dict[str, Any], headers: dict[str, str], retry_reads: bool
+        self,
+        url: str,
+        body: dict[str, Any],
+        headers: dict[str, str],
+        retry_reads: bool,
+        method: str = "POST",
     ) -> Any:
         attempts = 1 + (MAX_READ_RETRIES if retry_reads else 0)
         last: Exception | None = None
         for i in range(attempts):
             await self._rate.acquire()
             try:
-                return await post_json(self._http, url, body, headers, self._settings.http_timeout)
+                return await post_json(
+                    self._http, url, body, headers, self._settings.http_timeout, method
+                )
             except RsgeTimeoutError as exc:
                 last = exc
             except RsgeHttpError as exc:

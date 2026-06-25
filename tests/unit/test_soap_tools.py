@@ -9,8 +9,8 @@ import respx
 from helpers import FakeMCP, make_ctx, soap_diffgram, soap_scalar
 from rsge_mcp.errors import RsgeConfigError
 from rsge_mcp.models.waybill import WaybillGood
-from rsge_mcp.soap.services import NTOS, WAYBILL
-from rsge_mcp.tools.soap import ntos_invoice, waybill
+from rsge_mcp.soap.services import NTOS, TAXPAYER, WAYBILL
+from rsge_mcp.tools.soap import ntos_invoice, taxpayer, waybill
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 
@@ -282,3 +282,43 @@ async def test_ntos_save_invoice_requires_credentials(settings) -> None:
         ntos_invoice.register(fake, ctx)
         with pytest.raises(RsgeConfigError):
             await fake.tools["rsge_ntos_change_invoice_status"](invoice_id=1, status=2)
+
+
+async def test_z_report_details_credentials_and_order(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(TAXPAYER.endpoint).mock(
+            return_value=httpx.Response(
+                200,
+                text=soap_diffgram("Get_Z_Report_Details", "ZreportDetails", [{"ZNumber": "5"}]),
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            taxpayer.register(fake, ctx)
+            data = await fake.tools["rsge_get_z_report_details"](
+                "2024-01-01T00:00:00", "2024-01-31T00:00:00"
+            )
+        assert data == [{"ZNumber": "5"}]
+        body = _content(route)
+        assert "<UserName>itana</UserName>" in body  # bare username, not su:tin
+        assert "<Password>123456</Password>" in body
+        # WSDL order: UserName, Password, StartDate, EndDate
+        assert body.index("<UserName>") < body.index("<Password>") < body.index("<StartDate>")
+        assert "<EndDate>2024-01-31T00:00:00</EndDate>" in body
+
+
+async def test_z_report_sum_scalar(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(TAXPAYER.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_scalar("Get_Z_Report_Sum", PaidCash="100", PaidOther="50")
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            taxpayer.register(fake, ctx)
+            data = await fake.tools["rsge_get_z_report_sum"](
+                "2024-01-01T00:00:00", "2024-01-31T00:00:00"
+            )
+        assert data == {"PaidCash": "100", "PaidOther": "50"}
+        assert "<StartDate>2024-01-01T00:00:00</StartDate>" in _content(route)

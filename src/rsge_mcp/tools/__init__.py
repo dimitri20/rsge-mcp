@@ -14,9 +14,20 @@ if TYPE_CHECKING:
 def register_all(mcp: FastMCP, settings: Settings) -> None:
     """Build the shared context and register every tool module (REST + SOAP)."""
     ctx = build_context(settings)
-    from . import auth_tools, common, invoice, org, taxpayer_public
-    from .soap import ntos_invoice, waybill
+    from . import auth_tools, common, customs, employees, invoice, org, taxpayer_public
+    from .soap import ntos_invoice, taxpayer, waybill
 
-    modules = (org, common, invoice, taxpayer_public, auth_tools, waybill, ntos_invoice)
+    modules = (
+        org,
+        common,
+        invoice,
+        employees,
+        customs,
+        taxpayer_public,
+        auth_tools,
+        waybill,
+        ntos_invoice,
+        taxpayer,
+    )
     for module in modules:
         module.register(mcp, ctx)
