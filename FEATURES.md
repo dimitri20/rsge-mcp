@@ -6,7 +6,7 @@ rs.ge tax & logistics paperwork conversationally — *"is this company a VAT pay
 waybill for this shipment"*, *"list my unconfirmed invoices"* — instead of clicking through the
 rs.ge portal or writing API integration code.
 
-It currently exposes **68 tools** across 8 business areas, bridging both rs.ge API generations
+It currently exposes **90 tools** across 8 business areas, bridging both rs.ge API generations
 (modern REST/JSON eAPI + legacy SOAP/ASMX).
 
 ---
@@ -64,23 +64,32 @@ confirm/refuse at period end, VAT-declaration prep.
 ## 3. Electronic VAT invoices — legacy ntos service 🧾
 
 The same VAT-invoice domain via the **older SOAP service** that most Georgian accounting
-products integrate with — so this MCP works with both API generations.
+products integrate with — now with the full accounting workflow, so this MCP works with both
+API generations end-to-end.
 
 **What you can do**
-- **Save an invoice header**, then **add line items** one at a time.
-- **Fetch** an invoice; **list invoices you issued** (seller) or **received** (buyer), with
-  date/number/party filters.
-- **Change an invoice's status** — saved → sent → confirmed, or delete a draft.
+- **Issue** an invoice header (+ note variant), **add / read / delete line items**.
+- **Correct** an invoice (credit/debit notes) and **cancel** it.
+- **Buyer side:** accept or refuse a received invoice. **Seller side:** change status.
+- **Advance / prepayment netting:** issue an advance invoice, find attachable advances,
+  **attach / update / detach** them to net prepayments against a delivery invoice.
+- **Invoice requests:** buyer asks a seller to issue an invoice; seller lists & accepts; buyer withdraws.
+- **Fetch / list** issued (seller) or received (buyer) invoices with date/number/party filters.
+- **Identity glue:** resolve TIN ↔ `un_id`, your own `un_id`, and an org's name from `un_id`.
 
-**Business uses:** integrate with legacy accounting workflows, seller/buyer invoice registers.
+**Business uses:** integrate with legacy accounting workflows, prepayment/advance accounting,
+credit/debit-note corrections, seller/buyer invoice registers and request flows.
 
 | Tool | Action |
 |---|---|
-| `rsge_ntos_save_invoice` | Save invoice header |
-| `rsge_ntos_save_invoice_desc` | Add one line item |
-| `rsge_ntos_get_invoice` | Fetch one invoice |
-| `rsge_ntos_get_seller_invoices` / `rsge_ntos_get_buyer_invoices` | List issued / received |
-| `rsge_ntos_change_invoice_status` | Confirm/reject/cancel/delete |
+| `rsge_ntos_save_invoice` · `rsge_ntos_save_invoice_a` · `rsge_ntos_save_invoice_n` | Issue invoice · advance invoice · with note |
+| `rsge_ntos_save_invoice_desc` · `rsge_ntos_get_invoice_desc` · `rsge_ntos_delete_invoice_desc` | Line items (add · read · delete) |
+| `rsge_ntos_correct_invoice` · `rsge_ntos_cancel_invoice` | Correction (credit/debit note) · cancel |
+| `rsge_ntos_change_invoice_status` · `rsge_ntos_accept_invoice_status` · `rsge_ntos_refuse_invoice_status` | Seller status · buyer accept / refuse |
+| `rsge_ntos_get_attachable_advance_invoices` · `rsge_ntos_attach_advance_invoice` · `rsge_ntos_get_attached_advance_invoices` · `rsge_ntos_update_advance_invoice` · `rsge_ntos_detach_advance_invoices` | Advance/prepayment netting |
+| `rsge_ntos_save_invoice_request` · `rsge_ntos_get_invoice_request(s)` · `rsge_ntos_get_requested_invoices` · `rsge_ntos_accept_invoice_request` · `rsge_ntos_del_invoice_request` | Invoice-request lifecycle |
+| `rsge_ntos_get_invoice` · `rsge_ntos_get_seller_invoices` / `rsge_ntos_get_buyer_invoices` | Fetch · list issued / received |
+| `rsge_ntos_get_un_id_from_tin` · `rsge_ntos_get_un_id_from_user_id` · `rsge_ntos_get_org_name_from_un_id` | Identity resolution |
 | `rsge_ntos_check_service_user` | Validate your service credentials |
 
 ---
@@ -209,18 +218,19 @@ overrides `RSGE_SOAP_BASE` / `RSGE_XDATA_BASE`.
 ## Coverage vs. the full rs.ge API
 
 The rs.ge surface is **287 documented operations** (251 SOAP across 6 services + 36 REST across
-7 groups). We've shipped **68 tools** (~64 raw ops, ~22%) — but that **understates** real coverage:
-the shipped tools deliver **~55–60% of business value**, because they now complete the two
-highest-traffic domains end-to-end (the full modern VAT-invoice lifecycle and the waybill workflow
-incl. reference + party validation), plus employee registry, customs reads, cash-register Z-reports,
-and company/TIN due diligence. The remaining gap is mostly whole new domains (NSAF fuel invoices,
-duty-free) and low-value long-tails (diagnostics, portal-only helpers).
+7 groups). We've shipped **90 tools** (~86 raw ops, ~30%) — but that **understates** real coverage:
+the shipped tools deliver **~65% of business value**, because they now complete the three
+highest-traffic domains end-to-end (the **modern eAPI VAT-invoice lifecycle**, the **waybill
+workflow** incl. reference + party validation, and the **legacy ntos VAT-invoice** flows incl.
+advance netting / corrections / requests), plus employee registry, customs reads, cash-register
+Z-reports, and company/TIN due diligence. The remaining gap is mostly whole new domains (NSAF fuel
+invoices, duty-free) and low-value long-tails (diagnostics, portal-only helpers).
 
 | Surface | Implemented | Total |
 |---|---|---|
 | REST / eAPI | ~26 | 36 |
 | SOAP — waybill | 29 | 56 |
-| SOAP — ntos (VAT) | 7 | 54 |
+| SOAP — ntos (VAT) | 29 | 54 |
 | SOAP — taxpayer (Z-reports) | 2 | 20 |
 | SOAP — NSAF / duty-free / parcels | 0 | 121 |
 
@@ -237,7 +247,7 @@ duty-free) and low-value long-tails (diagnostics, portal-only helpers).
 | ✅ **P2** | **eAPI Employees** (registry CRUD) + **Customs** declarations + cash-register **Z-reports**. **Shipped (+7).** | ~7 | High | Low |
 | ✅ **P3** | **Waybill** long-tail — reference catalogs (valid payloads), lifecycle completers (confirm/reject/cancel + send/close-with-date), identity helpers, by-number/PDF reads, waybill→invoice (→ 29/56). **Shipped (+22).** | ~22 | High | Med |
 | **P3b** | **Waybill** role-based + goods-list reads (`get_buyer_waybills`, `get_waybill_goods_list`, transporter views) with an order-preserving filter helper | ~6 | Med | Low |
-| **P4** | **ntos invoice** long-tail — advance/prepayment netting, corrections (credit/debit notes), accept/refuse, identity glue (un_id↔TIN) | ~18 | High | High |
+| ✅ **P4** | **ntos invoice** long-tail — advance/prepayment netting, corrections (credit/debit notes) + cancel, buyer accept/refuse, line items, invoice-request flow, identity glue (→ 29/54). **Shipped (+22).** | ~22 | High | High |
 | **P5** | **NSAF oil/fuel special invoices** (new domain — every petroleum wholesaler) | ~28 | High | High |
 | **P6** | **Duty-Free** goods journals (new — high value but only for licensed free-trade operators) | ~26 | Med | High |
 | **P7** | Income / taxpayer-profile / comparison-acts + personal income (some need an SMS OTP → human-in-the-loop) | ~12 | Med | Med |

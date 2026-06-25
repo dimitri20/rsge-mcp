@@ -517,3 +517,271 @@ async def test_waybill_to_invoice_body(soap_settings) -> None:
             await fake.tools["rsge_waybill_to_invoice"](7, in_inv_id=3)
         body = _content(route)
         assert "<waybill_id>7</waybill_id>" in body and "<in_inv_id>3</in_inv_id>" in body
+
+
+# --- P4: ntos long-tail ---
+
+
+async def test_ntos_save_invoice_a_su_sp_last(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(NTOS.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_scalar("save_invoice_a", save_invoice_aResult="500")
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            ntos_invoice.register(fake, ctx)
+            await fake.tools["rsge_ntos_save_invoice_a"](
+                invoice_id=1,
+                operation_date="2026-01-01T00:00:00",
+                seller_un_id=2,
+                buyer_un_id=3,
+                overhead_dt="2026-01-01T00:00:00",
+                b_s_user_id=1,
+            )
+        body = _content(route)
+        assert "<invois_id>1</invois_id>" in body
+        assert body.index("<b_s_user_id>") < body.index("<su>") < body.index("<sp>")
+
+
+async def test_ntos_save_invoice_n_note_after_su_sp(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(NTOS.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_scalar("save_invoice_n", save_invoice_nResult="1")
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            ntos_invoice.register(fake, ctx)
+            await fake.tools["rsge_ntos_save_invoice_n"](
+                invoice_id=1,
+                operation_date="D",
+                seller_un_id=2,
+                buyer_un_id=3,
+                overhead_dt="D",
+                b_s_user_id=1,
+                note="hello",
+            )
+        body = _content(route)
+        assert "<note>hello</note>" in body
+        assert body.index("<sp>") < body.index("<note>")  # WSDL quirk: note AFTER su/sp
+
+
+@pytest.mark.parametrize(
+    "tool,op,args,checks",
+    [
+        (
+            "rsge_ntos_correct_invoice",
+            "k_invoice",
+            (5, 3),
+            ["<inv_id>5</inv_id>", "<k_type>3</k_type>"],
+        ),
+        ("rsge_ntos_cancel_invoice", "g_invoice", (5,), ["<inv_id>5</inv_id>"]),
+        (
+            "rsge_ntos_accept_invoice_status",
+            "acsept_invoice_status",
+            (5, 2),
+            ["<inv_id>5</inv_id>", "<status>2</status>"],
+        ),
+        (
+            "rsge_ntos_delete_invoice_desc",
+            "delete_invoice_desc",
+            (5, 9),
+            ["<id>9</id>", "<inv_id>5</inv_id>"],
+        ),
+        (
+            "rsge_ntos_accept_invoice_request",
+            "acsept_invoice_request_status",
+            (7, 4),
+            ["<id>7</id>", "<seller_un_id>4</seller_un_id>"],
+        ),
+        (
+            "rsge_ntos_del_invoice_request",
+            "del_invoice_request",
+            (5, 6),
+            ["<inv_id>5</inv_id>", "<bayer_un_id>6</bayer_un_id>"],
+        ),
+    ],
+)
+async def test_ntos_simple_writes_su_sp_last(soap_settings, tool, op, args, checks) -> None:
+    with respx.mock as router:
+        route = router.post(NTOS.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar(op, Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            ntos_invoice.register(fake, ctx)
+            await fake.tools[tool](*args)
+        body = _content(route)
+        for c in checks:
+            assert c in body
+        assert body.rindex("<su>") < body.rindex("<sp>")  # su then sp, trailing
+
+
+async def test_ntos_refuse_invoice_status_optional_text(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(NTOS.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar("ref_invoice_status", Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            ntos_invoice.register(fake, ctx)
+            await fake.tools["rsge_ntos_refuse_invoice_status"](5, ref_text="wrong amount")
+        body = _content(route)
+        assert "<ref_text>wrong amount</ref_text>" in body
+        assert body.index("<ref_text>") < body.index("<su>")  # ref_text before su/sp
+
+
+@pytest.mark.parametrize(
+    "tool,op,args,checks",
+    [
+        (
+            "rsge_ntos_attach_advance_invoice",
+            "attach_advance_invoice",
+            (1, 2, 3.0, 4),
+            [
+                "<invoice_id>1</invoice_id>",
+                "<advance_invoice_id>2</advance_invoice_id>",
+                "<advance_invoice_drg_amount>3.0</advance_invoice_drg_amount>",
+                "<seller_un_id>4</seller_un_id>",
+            ],
+        ),
+        (
+            "rsge_ntos_update_advance_invoice",
+            "update_advance_invoice",
+            (1, 2, 3.0),
+            ["<invoice_id>1</invoice_id>", "<advance_invoice_id>2</advance_invoice_id>"],
+        ),
+        (
+            "rsge_ntos_get_attached_advance_invoices",
+            "get_attached_advance_invoices",
+            (1,),
+            ["<invoice_id>1</invoice_id>"],
+        ),
+    ],
+)
+async def test_ntos_advance_su_sp_first(soap_settings, tool, op, args, checks) -> None:
+    with respx.mock as router:
+        route = router.post(NTOS.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar(op, Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            ntos_invoice.register(fake, ctx)
+            await fake.tools[tool](*args)
+        body = _content(route)
+        for c in checks:
+            assert c in body
+        assert body.index("<su>") < body.index("<sp>") < body.index("<user_id>")  # su/sp FIRST
+
+
+async def test_ntos_get_attachable_advance_invoices(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(NTOS.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_diffgram("get_attachable_advance_invoices", "ADV", [{"ID": "1"}])
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            ntos_invoice.register(fake, ctx)
+            data = await fake.tools["rsge_ntos_get_attachable_advance_invoices"](
+                seller_un_id=4, operation_date="2026-01-01T00:00:00", buyer_tin="123"
+            )
+        assert data == [{"ID": "1"}]
+        body = _content(route)
+        assert body.index("<su>") < body.index("<user_id>")  # su/sp FIRST
+        assert "<buyer_tin>123</buyer_tin>" in body
+        assert body.index("<buyer_tin>") < body.index("<operation_date>")  # WSDL order
+
+
+async def test_ntos_detach_advance_invoices_xml(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(NTOS.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_scalar("detach_advance_invoices", Result="1")
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            ntos_invoice.register(fake, ctx)
+            await fake.tools["rsge_ntos_detach_advance_invoices"](1, [7, 8])
+        assert "<advance_invoices><id>7</id><id>8</id></advance_invoices>" in _content(route)
+
+
+async def test_ntos_detach_advance_invoices_rejects_empty(soap_settings) -> None:
+    async with make_ctx(soap_settings) as ctx:
+        fake = FakeMCP()
+        ntos_invoice.register(fake, ctx)
+        with pytest.raises(ValueError):
+            await fake.tools["rsge_ntos_detach_advance_invoices"](1, [])
+
+
+async def test_ntos_save_invoice_request_shape(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(NTOS.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar("save_invoice_request", Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            ntos_invoice.register(fake, ctx)
+            await fake.tools["rsge_ntos_save_invoice_request"](
+                invoice_id=1,
+                buyer_un_id=2,
+                seller_un_id=3,
+                dt="2026-01-01T00:00:00",
+                notes="please",
+            )
+        body = _content(route)
+        assert "<bayer_un_id>2</bayer_un_id>" in body  # rs.ge spelling on the wire
+        assert "<notes>please</notes>" in body
+        assert body.index("<dt>") < body.index("<notes>") < body.index("<su>")  # WSDL order
+
+
+@pytest.mark.parametrize(
+    "tool,op,args,checks",
+    [
+        ("rsge_ntos_get_un_id_from_tin", "get_un_id_from_tin", ("123",), ["<tin>123</tin>"]),
+        (
+            "rsge_ntos_get_un_id_from_user_id",
+            "get_un_id_from_user_id",
+            (),
+            ["<user_id>0</user_id>"],
+        ),
+        (
+            "rsge_ntos_get_org_name_from_un_id",
+            "get_org_name_from_un_id",
+            (731937,),
+            ["<un_id>731937</un_id>"],
+        ),
+        ("rsge_ntos_get_invoice_desc", "get_invoice_desc", (5,), ["<invois_id>5</invois_id>"]),
+        ("rsge_ntos_get_invoice_request", "get_invoice_request", (5,), ["<inv_id>5</inv_id>"]),
+        (
+            "rsge_ntos_get_invoice_requests",
+            "get_invoice_requests",
+            (2,),
+            ["<bayer_un_id>2</bayer_un_id>"],
+        ),
+        (
+            "rsge_ntos_get_requested_invoices",
+            "get_requested_invoices",
+            (3,),
+            ["<seller_un_id>3</seller_un_id>"],
+        ),
+    ],
+)
+async def test_ntos_reads_su_sp_last(soap_settings, tool, op, args, checks) -> None:
+    with respx.mock as router:
+        route = router.post(NTOS.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar(op, Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            ntos_invoice.register(fake, ctx)
+            await fake.tools[tool](*args)
+        body = _content(route)
+        for c in checks:
+            assert c in body
+        assert body.rindex("<su>") < body.rindex("<sp>")  # su/sp present, su before sp
