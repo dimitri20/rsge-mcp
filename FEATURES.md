@@ -6,7 +6,7 @@ rs.ge tax & logistics paperwork conversationally — *"is this company a VAT pay
 waybill for this shipment"*, *"list my unconfirmed invoices"* — instead of clicking through the
 rs.ge portal or writing API integration code.
 
-It currently exposes **124 tools** across 9 business areas, bridging both rs.ge API generations
+It currently exposes **144 tools** across 10 business areas, bridging both rs.ge API generations
 (modern REST/JSON eAPI + legacy SOAP/ASMX).
 
 ---
@@ -201,7 +201,29 @@ Fiscal cash-register totals (SOAP `taxpayerservice`) — for accounting and audi
 
 ---
 
-## 9. Reference data, transactions & session 🔧
+## 9. Duty-free goods journals 🛍️
+
+Goods journals for licensed **duty-free** shops/warehouses (free-trade operators), via `wsdutyfree`.
+
+**What you can do**
+- **Incoming journal (FormGoodsIn):** record goods entering the point, edit, **send** to rs.ge,
+  confirm receipt, reject, or delete.
+- **Outgoing journal (FormGoodsOut):** record goods sold to travellers (passport / air-ticket) or
+  transferred to another point, edit, send, delete.
+- **Reference:** unit types, point codes, goods statuses, and per-journal operation types.
+
+**Business uses:** duty-free inventory in/out reporting, traveller-sale documentation, point transfers.
+
+| Tool | Action |
+|---|---|
+| `rsge_df_save_goods_in` · `rsge_df_update_goods_in` · `rsge_df_send_goods_in` · `rsge_df_send_receive_goods_in` / `rsge_df_update_receive_goods_in` · `rsge_df_reject_goods_in` · `rsge_df_delete_goods_in` | Incoming journal lifecycle |
+| `rsge_df_save_goods_out` · `rsge_df_update_goods_out` · `rsge_df_send_goods_out` · `rsge_df_delete_goods_out` | Outgoing journal lifecycle |
+| `rsge_df_get_goods_in` / `rsge_df_list_goods_in` · `rsge_df_get_goods_out` / `rsge_df_list_goods_out` | Fetch / list |
+| `rsge_df_get_units` · `rsge_df_get_point_codes` · `rsge_df_get_goods_statuses` · `rsge_df_get_goods_in_operations` / `rsge_df_get_goods_out_operations` | Reference lookups |
+
+---
+
+## 10. Reference data, transactions & session 🔧
 
 Supporting tools the others build on.
 
@@ -249,14 +271,13 @@ overrides `RSGE_SOAP_BASE` / `RSGE_XDATA_BASE`.
 ## Coverage vs. the full rs.ge API
 
 The rs.ge surface is **287 documented operations** (251 SOAP across 6 services + 36 REST across
-7 groups). We've shipped **90 tools** (~86 raw ops, ~30%) — but that **understates** real coverage:
-the shipped tools deliver **~75% of business value**, because they now complete the four
-highest-traffic domains end-to-end (the **modern eAPI VAT-invoice lifecycle**, the **waybill
-workflow** incl. reference + party validation, the **legacy ntos VAT-invoice** flows incl. advance
-netting / corrections / requests, and the **NSAF oil/fuel special invoices** incl. transport tracking
-+ SSD/SSAF sub-documents), plus employee registry, customs reads, cash-register Z-reports, and
-company/TIN due diligence. The remaining gap is one new domain (duty-free) and low-value long-tails
-(diagnostics, portal-only helpers).
+7 groups). We've shipped **144 tools** (~140 raw ops, ~49%) — but that **understates** real coverage:
+the shipped tools deliver **~85% of business value**, because **all five SOAP record-domains plus the
+modern eAPI invoice flow are now wired end-to-end** — the modern eAPI VAT-invoice lifecycle, the
+waybill workflow, the legacy ntos VAT-invoice flows, the NSAF oil/fuel special invoices, and the
+duty-free goods journals — plus employee registry, customs reads, cash-register Z-reports, and
+company/TIN due diligence. **No new domains remain**; the gap is now intra-domain long-tails
+(batch/Oil variants, deprecated forms, diagnostics) and the income/taxpayer-profile group.
 
 | Surface | Implemented | Total |
 |---|---|---|
@@ -264,8 +285,9 @@ company/TIN due diligence. The remaining gap is one new domain (duty-free) and l
 | SOAP — waybill | 29 | 56 |
 | SOAP — ntos (VAT) | 29 | 54 |
 | SOAP — specinvoices (NSAF fuel) | 34 | 45 |
-| SOAP — taxpayer (Z-reports) | 2 | 20 |
-| SOAP — duty-free / parcels | 0 | 76 |
+| SOAP — dutyfree | 20 | 72 |
+| SOAP — taxpayer (income / Z-reports) | 2 | 20 |
+| SOAP — custompost (parcels) | 0 | 4 |
 
 > **The honest target is ~95% *business-value* coverage (≈150–170 ops), not 100% raw-op parity.**
 > The long tail is deprecated forms, portal-only helpers, headless-impossible SMS/OTP flows, and
@@ -282,11 +304,13 @@ company/TIN due diligence. The remaining gap is one new domain (duty-free) and l
 | **P3b** | **Waybill** role-based + goods-list reads (`get_buyer_waybills`, `get_waybill_goods_list`, transporter views) with an order-preserving filter helper | ~6 | Med | Low |
 | ✅ **P4** | **ntos invoice** long-tail — advance/prepayment netting, corrections (credit/debit notes) + cancel, buyer accept/refuse, line items, invoice-request flow, identity glue (→ 29/54). **Shipped (+22).** | ~22 | High | High |
 | ✅ **P5** | **NSAF oil/fuel special invoices** (new domain) — issue header + line items, SSD/SSAF sub-docs, transport flow, accept/refuse, correction/cancel, advance netting, lookups (→ 34/45). **Shipped (+34).** | ~34 | High | High |
-| **P6** | **Duty-Free** goods journals (new — high value but only for licensed free-trade operators) | ~26 | Med | High |
+| ✅ **P6** | **Duty-Free** goods journals (new domain) — FormGoodsIn/FormGoodsOut lifecycles (save/send/receive/reject/delete) + reference lookups (→ 20/72; List/Oil/barcode variants deferred). **Shipped (+20).** | ~20 | Med | High |
 | **P7** | Income / taxpayer-profile / comparison-acts + personal income (some need an SMS OTP → human-in-the-loop) | ~12 | Med | Med |
 | **P8** | Cosmetic long-tail + OAuth delegation — *only if literal 100% is contractually required* (drive via WSDL codegen, don't hand-author) | ~80+ | Low | High |
 
-**"Complete" = P0–P5 (+ the documented half of P7) ≈ 150–170 ops ≈ ~95% of business value.**
+**P0–P6 are shipped (144 tools, ~85% of business value). All new domains are now covered** — what
+remains is "harden & ship" (end-user README + publish + live verification), the small **P3b** waybill
+reads, and the **P7** income/taxpayer-profile group; **P8** (cosmetic + OAuth) stays out of scope.
 
 ### Cross-cutting prerequisites
 - **Write guardrails (P0)** — there is currently *no* read-only/allow-write gate; `RSGE_ENV=test`

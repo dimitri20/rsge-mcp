@@ -10,8 +10,8 @@ from helpers import FakeMCP, make_ctx, soap_diffgram, soap_scalar
 from rsge_mcp.errors import RsgeConfigError
 from rsge_mcp.models.spec_invoice import SpecInvoice, SpecInvoiceDesc
 from rsge_mcp.models.waybill import WaybillGood
-from rsge_mcp.soap.services import NTOS, SPECINVOICES, TAXPAYER, WAYBILL
-from rsge_mcp.tools.soap import ntos_invoice, spec_invoice, taxpayer, waybill
+from rsge_mcp.soap.services import DUTYFREE, NTOS, SPECINVOICES, TAXPAYER, WAYBILL
+from rsge_mcp.tools.soap import dutyfree, ntos_invoice, spec_invoice, taxpayer, waybill
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 
@@ -1114,3 +1114,144 @@ async def test_spec_save_invoice_requires_soap_credentials(settings) -> None:
         spec_invoice.register(fake, ctx)
         with pytest.raises(RsgeConfigError):
             await fake.tools["rsge_spec_save_invoice"](_spec_header())
+
+
+# --- P6: duty-free goods journals (userName/password auth) ---
+
+
+async def test_df_save_goods_in_shape(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(DUTYFREE.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_scalar("SaveFormGoodsIn", SaveFormGoodsInResult="1")
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            dutyfree.register(fake, ctx)
+            await fake.tools["rsge_df_save_goods_in"]("2026-01-01T00:00:00", 1, 2.0, 3.0, 5, 7)
+        body = _content(route)
+        assert body.index("<userName>itana</userName>") < body.index("<password>123456</password>")
+        assert "<statusID>5</statusID>" in body and "<operationID>7</operationID>" in body
+        assert "<barCode>" not in body  # unset optional dropped by compact()
+
+
+async def test_df_update_goods_in_has_id_no_status(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(DUTYFREE.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar("UpdateFormGoodsIn", Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            dutyfree.register(fake, ctx)
+            await fake.tools["rsge_df_update_goods_in"](9, "2026-01-01T00:00:00", 1, 2.0, 3.0, 7)
+        body = _content(route)
+        assert "<id>9</id>" in body and "<statusID>" not in body  # update has no statusID
+
+
+async def test_df_save_goods_out_shape(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(DUTYFREE.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar("SaveFormGoodsOut", Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            dutyfree.register(fake, ctx)
+            await fake.tools["rsge_df_save_goods_out"](
+                "2026-01-01T00:00:00", 2.0, 3.0, 7, person_number="PN1"
+            )
+        body = _content(route)
+        assert "<saleDate>2026-01-01T00:00:00</saleDate>" in body
+        assert "<personNumber>PN1</personNumber>" in body
+        assert "<airTicketNumber>" not in body  # dropped
+
+
+@pytest.mark.parametrize(
+    "tool,op,args,checks",
+    [
+        ("rsge_df_reject_goods_in", "RejectFormGoodsIn", (5,), ["<id>5</id>"]),
+        ("rsge_df_delete_goods_in", "DeleteFormGoodsIn", (5,), ["<id>5</id>"]),
+        ("rsge_df_delete_goods_out", "DeleteFormGoodsOut", (5,), ["<id>5</id>"]),
+        (
+            "rsge_df_send_receive_goods_in",
+            "SendReceiveFormGoodsIn",
+            (5, "D", 2.0),
+            ["<id>5</id>", "<unitPrice>2.0</unitPrice>"],
+        ),
+        (
+            "rsge_df_update_receive_goods_in",
+            "UpdateReceiveFormGoodsIn",
+            (5, "D", 2.0),
+            ["<id>5</id>", "<declarationDate>D</declarationDate>"],
+        ),
+        (
+            "rsge_df_send_goods_in",
+            "SendFormGoodsIn",
+            (5, "D", 1, 2.0, 3.0, 7),
+            ["<id>5</id>", "<operationID>7</operationID>"],
+        ),
+        (
+            "rsge_df_send_goods_out",
+            "SendFormGoodsOut",
+            (5, "D", 2.0, 3.0, 7),
+            ["<id>5</id>", "<saleDate>D</saleDate>"],
+        ),
+        ("rsge_df_update_goods_out", "UpdateFormGoodsOut", (5, "D", 2.0, 3.0, 7), ["<id>5</id>"]),
+    ],
+)
+async def test_df_writes_username_first(soap_settings, tool, op, args, checks) -> None:
+    with respx.mock as router:
+        route = router.post(DUTYFREE.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar(op, Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            dutyfree.register(fake, ctx)
+            await fake.tools[tool](*args)
+        body = _content(route)
+        for c in checks:
+            assert c in body
+        assert body.index("<userName>") < body.index("<password>")
+        assert "<su>" not in body  # userName/password auth, NOT su/sp
+
+
+@pytest.mark.parametrize(
+    "tool,op,args,checks",
+    [
+        ("rsge_df_get_goods_in", "GetFormGoodsIn", (5,), ["<id>5</id>"]),
+        (
+            "rsge_df_list_goods_in",
+            "GetFormGoodsInList",
+            ("A", "B"),
+            ["<startDate>A</startDate>", "<endDate>B</endDate>"],
+        ),
+        ("rsge_df_get_goods_in_operations", "GetFormGoodsInOperations", (), []),
+        ("rsge_df_get_goods_out", "GetFormGoodsOut", (5,), ["<id>5</id>"]),
+        ("rsge_df_list_goods_out", "GetFormGoodsOutList", ("A", "B"), ["<startDate>A</startDate>"]),
+        ("rsge_df_get_goods_out_operations", "GetFormGoodsOutOperations", (), []),
+        ("rsge_df_get_units", "get_units", (), []),
+        ("rsge_df_get_point_codes", "get_point_codes", (), []),
+        ("rsge_df_get_goods_statuses", "get_goods_statuses", (), []),
+    ],
+)
+async def test_df_reads_username_auth(soap_settings, tool, op, args, checks) -> None:
+    with respx.mock as router:
+        route = router.post(DUTYFREE.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_diffgram(op, "ROW", [{"ID": "1"}]))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            dutyfree.register(fake, ctx)
+            await fake.tools[tool](*args)
+        body = _content(route)
+        for c in checks:
+            assert c in body
+        assert "<userName>itana</userName>" in body and "<password>123456</password>" in body
+
+
+async def test_df_requires_soap_credentials(settings) -> None:
+    async with make_ctx(settings) as ctx:  # no SOAP creds
+        fake = FakeMCP()
+        dutyfree.register(fake, ctx)
+        with pytest.raises(RsgeConfigError):
+            await fake.tools["rsge_df_get_units"]()

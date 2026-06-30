@@ -19,7 +19,7 @@ from rsge_mcp.models.spec_invoice import SpecInvoice, SpecInvoiceDesc
 from rsge_mcp.models.waybill import WaybillGood
 from rsge_mcp.soap.services import WAYBILL
 from rsge_mcp.tools import employees, invoice
-from rsge_mcp.tools.soap import ntos_invoice, spec_invoice, waybill
+from rsge_mcp.tools.soap import dutyfree, ntos_invoice, spec_invoice, waybill
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 
@@ -56,7 +56,7 @@ _SPEC_DESC = SpecInvoiceDesc(
     p_drg_type=1,
 )
 
-# Every mutating tool, with minimal valid arguments. Must list ALL 59 writes.
+# Every mutating tool, with minimal valid arguments. Must list ALL 70 writes.
 WRITE_CALLS = {
     "save_invoice": lambda t: t["rsge_save_invoice"](
         seller_tin="1",
@@ -162,11 +162,23 @@ WRITE_CALLS = {
     "spec_correct_transport_mark": lambda t: t["rsge_spec_correct_transport_mark"](1, 2),
     "spec_correct_driver_info": lambda t: t["rsge_spec_correct_driver_info"](1, 2, 1),
     "spec_save_invoice_request": lambda t: t["rsge_spec_save_invoice_request"](1, 2, 3, _DT),
+    # Duty-free goods journals (P6)
+    "df_save_goods_in": lambda t: t["rsge_df_save_goods_in"](_DT, 1, 1.0, 1.0, 1, 1),
+    "df_update_goods_in": lambda t: t["rsge_df_update_goods_in"](1, _DT, 1, 1.0, 1.0, 1),
+    "df_send_goods_in": lambda t: t["rsge_df_send_goods_in"](1, _DT, 1, 1.0, 1.0, 1),
+    "df_send_receive_goods_in": lambda t: t["rsge_df_send_receive_goods_in"](1, _DT, 1.0),
+    "df_update_receive_goods_in": lambda t: t["rsge_df_update_receive_goods_in"](1, _DT, 1.0),
+    "df_reject_goods_in": lambda t: t["rsge_df_reject_goods_in"](1),
+    "df_delete_goods_in": lambda t: t["rsge_df_delete_goods_in"](1),
+    "df_save_goods_out": lambda t: t["rsge_df_save_goods_out"](_DT, 1.0, 1.0, 1),
+    "df_update_goods_out": lambda t: t["rsge_df_update_goods_out"](1, _DT, 1.0, 1.0, 1),
+    "df_send_goods_out": lambda t: t["rsge_df_send_goods_out"](1, _DT, 1.0, 1.0, 1),
+    "df_delete_goods_out": lambda t: t["rsge_df_delete_goods_out"](1),
 }
 
 
 def _register_all(fake: FakeMCP, ctx) -> None:
-    for module in (invoice, employees, waybill, ntos_invoice, spec_invoice):
+    for module in (invoice, employees, waybill, ntos_invoice, spec_invoice, dutyfree):
         module.register(fake, ctx)
 
 

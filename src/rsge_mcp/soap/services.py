@@ -38,3 +38,9 @@ SPECINVOICES = SoapService(
     name="SpecInvoicesService",
     endpoint="https://webserv.rs.ge/specinvoices/SpecInvoicesService.asmx",
 )
+
+# Duty-free goods journals. Same webserv.rs.ge host; authenticates with userName/password.
+DUTYFREE = SoapService(
+    name="wsdutyfree",
+    endpoint="https://webserv.rs.ge/dutyfree/wsdutyfree.asmx",
+)
