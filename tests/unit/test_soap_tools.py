@@ -8,9 +8,10 @@ import respx
 
 from helpers import FakeMCP, make_ctx, soap_diffgram, soap_scalar
 from rsge_mcp.errors import RsgeConfigError
+from rsge_mcp.models.spec_invoice import SpecInvoice, SpecInvoiceDesc
 from rsge_mcp.models.waybill import WaybillGood
-from rsge_mcp.soap.services import NTOS, TAXPAYER, WAYBILL
-from rsge_mcp.tools.soap import ntos_invoice, taxpayer, waybill
+from rsge_mcp.soap.services import NTOS, SPECINVOICES, TAXPAYER, WAYBILL
+from rsge_mcp.tools.soap import ntos_invoice, spec_invoice, taxpayer, waybill
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 
@@ -785,3 +786,331 @@ async def test_ntos_reads_su_sp_last(soap_settings, tool, op, args, checks) -> N
         for c in checks:
             assert c in body
         assert body.rindex("<su>") < body.rindex("<sp>")  # su/sp present, su before sp
+
+
+# --- P5: NSAF special (oil/fuel) invoices ---
+
+
+def _spec_header() -> SpecInvoice:
+    return SpecInvoice(
+        p_OPERATION_DT="2026-01-01T00:00:00",
+        p_SELLER_UN_ID=1,
+        p_BUYER_UN_ID=2,
+        p_CALC_DATE="2026-01-01T00:00:00",
+        p_TR_ST_DATE="2026-01-01T00:00:00",
+        p_USER_ID=3,
+        p_S_USER_ID=4,
+        p_B_S_USER_ID=5,
+        p_SSD_DATE="2026-01-01T00:00:00",
+        p_SSAF_DATE="2026-01-01T00:00:00",
+        p_PAY_TYPE=1,
+        p_SSAF_ALT_STATUS=0,
+        p_SSD_ALT_STATUS=0,
+        p_driver_is_geo=1,
+        user_id=9,
+        invoiceType=2,
+        p_SSD_N="SSD-1",
+        p_OIL_ST_ADDRESS="Depot A",
+    )
+
+
+def _spec_desc() -> SpecInvoiceDesc:
+    return SpecInvoiceDesc(
+        p_g_number=10.0,
+        p_un_price=2.5,
+        p_drg_amount=4.5,
+        p_aqcizi_amount=0.0,
+        p_user_id=3,
+        p_aqcizi_rate=0.0,
+        p_dgg_rate=18.0,
+        p_g_number_alt=10.0,
+        p_good_id=7,
+        p_drg_type=1,
+        p_goods="Diesel",
+    )
+
+
+async def test_spec_save_invoice_header_field_order(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(SPECINVOICES.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_scalar("save_invoice_b_n", save_invoice_b_nResult="500")
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            spec_invoice.register(fake, ctx)
+            await fake.tools["rsge_spec_save_invoice"](_spec_header())
+        body = _content(route)
+        # flat sequence (no <waybill> wrapper); optional p_SSD_N sits before p_CALC_DATE per WSDL
+        assert "<p_SSD_N>SSD-1</p_SSD_N>" in body
+        assert body.index("<p_SSD_N>") < body.index("<p_CALC_DATE>")
+        # unset optionals dropped; trailing order ...invoiceType, su, sp
+        assert "<p_K_SSAF_N>" not in body
+        assert body.index("<invoiceType>") < body.index("<su>") < body.index("<sp>")
+
+
+async def test_spec_save_line_item_su_sp_mid(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(SPECINVOICES.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_scalar("save_invoice_desc_n", save_invoice_desc_nResult="1")
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            spec_invoice.register(fake, ctx)
+            await fake.tools["rsge_spec_save_line_item"](5, _spec_desc(), desc_id=0)
+        body = _content(route)
+        # WSDL: user_id, id, su, sp, p_inv_id, ...item
+        assert body.index("<su>") < body.index("<p_inv_id>") < body.index("<p_goods>")
+        assert "<p_good_id>7</p_good_id>" in body
+
+
+@pytest.mark.parametrize(
+    "tool,op,args,checks",
+    [
+        (
+            "rsge_spec_attach_advance",
+            "attach_advance_invoice",
+            (1, 2, 3.0, 4),
+            ["<seller_un_id>4</seller_un_id>", "<invoice_id>1</invoice_id>"],
+        ),
+        (
+            "rsge_spec_update_advance",
+            "update_advance_invoice",
+            (1, 2, 3.0),
+            ["<invoice_id>1</invoice_id>", "<advance_invoice_id>2</advance_invoice_id>"],
+        ),
+    ],
+)
+async def test_spec_advance_su_sp_early(soap_settings, tool, op, args, checks) -> None:
+    with respx.mock as router:
+        route = router.post(SPECINVOICES.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar(op, Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            spec_invoice.register(fake, ctx)
+            await fake.tools[tool](*args)
+        body = _content(route)
+        for c in checks:
+            assert c in body
+        # su/sp early: right after user_id, before the business fields
+        assert body.index("<user_id>") < body.index("<su>") < body.index("<sp>")
+        assert body.index("<sp>") < body.index("<advance_invoice_id>")
+
+
+async def test_spec_detach_advance_interleaved(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(SPECINVOICES.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar("detach_advance_invoice", Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            spec_invoice.register(fake, ctx)
+            await fake.tools["rsge_spec_detach_advance"](2, 3)
+        body = _content(route)
+        # WSDL: invoice_id, user_id, su, sp, advance_invoice_id
+        assert (
+            body.index("<invoice_id>")
+            < body.index("<user_id>")
+            < body.index("<su>")
+            < body.index("<sp>")
+            < body.index("<advance_invoice_id>")
+        )
+
+
+async def test_spec_add_ssaf_maps_to_ssd_wire_names(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(SPECINVOICES.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_scalar("add_spec_invoices_ssaf_n", Result="1")
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            spec_invoice.register(fake, ctx)
+            await fake.tools["rsge_spec_add_ssaf"](1, 2, "2026-01-01T00:00:00", ssaf_n="SSAF-9")
+        body = _content(route)
+        # rs.ge quirk: SSAF number rides the SSD-named wire fields
+        assert "<p_ssd_n>SSAF-9</p_ssd_n>" in body
+        assert "<p_ssaf_n>" not in body
+
+
+async def test_spec_get_seller_invoices_dates_required(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(SPECINVOICES.endpoint).mock(
+            return_value=httpx.Response(
+                200, text=soap_diffgram("get_seller_invoices_n", "INV", [{"ID": "1"}])
+            )
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            spec_invoice.register(fake, ctx)
+            data = await fake.tools["rsge_spec_get_seller_invoices"](
+                un_id=7, s_dt="A", e_dt="B", op_s_dt="C", op_e_dt="D"
+            )
+        assert data == [{"ID": "1"}]
+        body = _content(route)
+        for tag in ("s_dt", "e_dt", "op_s_dt", "op_e_dt"):
+            assert f"<{tag}>" in body  # required, always sent
+        assert body.rindex("<su>") < body.rindex("<sp>")
+
+
+@pytest.mark.parametrize(
+    "tool,op,args,checks",
+    [
+        (
+            "rsge_spec_delete_line_item",
+            "delete_invoice_desc",
+            (1, 2),
+            ["<id>2</id>", "<inv_id>1</inv_id>"],
+        ),
+        (
+            "rsge_spec_change_status",
+            "change_invoice_status_n",
+            (1, 2),
+            ["<inv_id>1</inv_id>", "<status>2</status>"],
+        ),
+        (
+            "rsge_spec_accept_status",
+            "acsept_invoice_status_n",
+            (1, 2),
+            ["<inv_id>1</inv_id>", "<status>2</status>"],
+        ),
+        (
+            "rsge_spec_correct_invoice",
+            "k_invoice_n",
+            (1, 11),
+            ["<inv_id>1</inv_id>", "<k_type>11</k_type>"],
+        ),
+        ("rsge_spec_cancel_reason", "gauqmebis_mizezi_n", (1,), ["<p_id>1</p_id>"]),
+        (
+            "rsge_spec_start_transport",
+            "start_transport_new_n",
+            (1, "D"),
+            ["<p_id>1</p_id>", "<p_tr_date>D</p_tr_date>"],
+        ),
+        (
+            "rsge_spec_correct_transport_mark",
+            "correct_transport_mark",
+            (1, 2),
+            ["<p_id>1</p_id>", "<p_seller_un_id>2</p_seller_un_id>"],
+        ),
+        (
+            "rsge_spec_correct_driver_info",
+            "correct_driver_info",
+            (1, 2, 1),
+            ["<p_driver_is_geo>1</p_driver_is_geo>"],
+        ),
+        (
+            "rsge_spec_delete_ssd",
+            "del_spec_invoices_ssd",
+            (1, 2, 3),
+            ["<p_inv_id>1</p_inv_id>", "<p_id>3</p_id>"],
+        ),
+        (
+            "rsge_spec_delete_ssaf",
+            "del_spec_invoices_ssaf",
+            (1, 2, 3),
+            ["<p_inv_id>1</p_inv_id>", "<p_id>3</p_id>"],
+        ),
+        (
+            "rsge_spec_add_ssd",
+            "add_spec_invoices_ssd_n",
+            (1, 2, "D"),
+            ["<p_inv_id>1</p_inv_id>", "<p_ssd_date>D</p_ssd_date>"],
+        ),
+        (
+            "rsge_spec_save_invoice_request",
+            "save_invoice_request",
+            (1, 2, 3, "D"),
+            ["<bayer_un_id>2</bayer_un_id>", "<dt>D</dt>"],
+        ),
+    ],
+)
+async def test_spec_simple_writes(soap_settings, tool, op, args, checks) -> None:
+    with respx.mock as router:
+        route = router.post(SPECINVOICES.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar(op, Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            spec_invoice.register(fake, ctx)
+            await fake.tools[tool](*args)
+        body = _content(route)
+        for c in checks:
+            assert c in body
+        assert body.rindex("<su>") < body.rindex("<sp>")
+
+
+@pytest.mark.parametrize(
+    "tool,op,args,checks",
+    [
+        ("rsge_spec_get_invoice", "get_invoice_n", (1,), ["<invois_id>1</invois_id>"]),
+        ("rsge_spec_get_line_items", "get_invoice_desc_n", (1,), ["<invois_id>1</invois_id>"]),
+        ("rsge_spec_get_correction", "get_makoreqtirebeli", (1,), ["<inv_id>1</inv_id>"]),
+        (
+            "rsge_spec_get_attached_advances",
+            "get_attached_advance_invoices",
+            (1,),
+            ["<invoice_id>1</invoice_id>"],
+        ),
+        (
+            "rsge_spec_get_attachable_advances",
+            "get_attachable_advance_invs",
+            ("D", 4),
+            ["<operation_dt>D</operation_dt>", "<seller_un_id>4</seller_un_id>"],
+        ),
+        (
+            "rsge_spec_get_ssds",
+            "get_spec_ssds_n",
+            (1, 2),
+            ["<p_un_id>2</p_un_id>", "<p_inv_id>1</p_inv_id>"],
+        ),
+        (
+            "rsge_spec_get_ssafs",
+            "get_spec_ssafs_n",
+            (1, 2),
+            ["<p_un_id>2</p_un_id>", "<p_inv_id>1</p_inv_id>"],
+        ),
+        ("rsge_spec_get_products", "get_spec_products_n", (7,), ["<p_un_id>7</p_un_id>"]),
+        (
+            "rsge_spec_get_product",
+            "get_spec_product_by_id",
+            (5, 7),
+            ["<p_id>5</p_id>", "<p_un_id>7</p_un_id>"],
+        ),
+        (
+            "rsge_spec_get_org_objects",
+            "get_v_org_objects_by_un_id_n",
+            (7, 2),
+            ["<p_un_id>7</p_un_id>", "<invoiceType>2</invoiceType>"],
+        ),
+        ("rsge_spec_get_my_org_objects", "get_rs_org_objects", (), ["<user_id>0</user_id>"]),
+        ("rsge_spec_print_invoice", "print_invoices", (1,), ["<inv_id>1</inv_id>"]),
+        ("rsge_spec_check_users", "check_spec_users", (), ["<user_id>0</user_id>"]),
+    ],
+)
+async def test_spec_reads(soap_settings, tool, op, args, checks) -> None:
+    with respx.mock as router:
+        route = router.post(SPECINVOICES.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar(op, Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            spec_invoice.register(fake, ctx)
+            await fake.tools[tool](*args)
+        body = _content(route)
+        for c in checks:
+            assert c in body
+        assert body.rindex("<su>") < body.rindex("<sp>")
+
+
+async def test_spec_save_invoice_requires_soap_credentials(settings) -> None:
+    async with make_ctx(settings) as ctx:  # no SOAP creds
+        fake = FakeMCP()
+        spec_invoice.register(fake, ctx)
+        with pytest.raises(RsgeConfigError):
+            await fake.tools["rsge_spec_save_invoice"](_spec_header())

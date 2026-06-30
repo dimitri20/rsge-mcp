@@ -32,3 +32,9 @@ TAXPAYER = SoapService(
     name="taxpayerservice",
     endpoint="https://services.rs.ge/taxservice/taxpayerservice.asmx",
 )
+
+# NSAF special (oil/fuel) invoices. Note the distinct host: webserv.rs.ge.
+SPECINVOICES = SoapService(
+    name="SpecInvoicesService",
+    endpoint="https://webserv.rs.ge/specinvoices/SpecInvoicesService.asmx",
+)

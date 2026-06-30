@@ -15,16 +15,48 @@ import respx
 from helpers import FakeMCP, make_ctx, soap_scalar
 from rsge_mcp.errors import RsgeWriteBlockedError
 from rsge_mcp.models.invoice import InvoiceGood
+from rsge_mcp.models.spec_invoice import SpecInvoice, SpecInvoiceDesc
 from rsge_mcp.models.waybill import WaybillGood
 from rsge_mcp.soap.services import WAYBILL
 from rsge_mcp.tools import employees, invoice
-from rsge_mcp.tools.soap import ntos_invoice, waybill
+from rsge_mcp.tools.soap import ntos_invoice, spec_invoice, waybill
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 
 _DT = "01-01-2026 00:00:00"
 
-# Every mutating tool, with minimal valid arguments. Must list ALL 40 writes.
+_SPEC = SpecInvoice(
+    p_OPERATION_DT=_DT,
+    p_SELLER_UN_ID=1,
+    p_BUYER_UN_ID=2,
+    p_CALC_DATE=_DT,
+    p_TR_ST_DATE=_DT,
+    p_USER_ID=1,
+    p_S_USER_ID=1,
+    p_B_S_USER_ID=1,
+    p_SSD_DATE=_DT,
+    p_SSAF_DATE=_DT,
+    p_PAY_TYPE=1,
+    p_SSAF_ALT_STATUS=0,
+    p_SSD_ALT_STATUS=0,
+    p_driver_is_geo=1,
+    user_id=1,
+    invoiceType=1,
+)
+_SPEC_DESC = SpecInvoiceDesc(
+    p_g_number=1,
+    p_un_price=1,
+    p_drg_amount=0,
+    p_aqcizi_amount=0,
+    p_user_id=1,
+    p_aqcizi_rate=0,
+    p_dgg_rate=18,
+    p_g_number_alt=1,
+    p_good_id=1,
+    p_drg_type=1,
+)
+
+# Every mutating tool, with minimal valid arguments. Must list ALL 59 writes.
 WRITE_CALLS = {
     "save_invoice": lambda t: t["rsge_save_invoice"](
         seller_tin="1",
@@ -110,11 +142,31 @@ WRITE_CALLS = {
     "ntos_save_invoice_request": lambda t: t["rsge_ntos_save_invoice_request"](1, 2, 3, _DT),
     "ntos_accept_invoice_request": lambda t: t["rsge_ntos_accept_invoice_request"](1, 2),
     "ntos_del_invoice_request": lambda t: t["rsge_ntos_del_invoice_request"](1, 2),
+    # NSAF special invoices (P5)
+    "spec_save_invoice": lambda t: t["rsge_spec_save_invoice"](_SPEC),
+    "spec_save_line_item": lambda t: t["rsge_spec_save_line_item"](1, _SPEC_DESC),
+    "spec_delete_line_item": lambda t: t["rsge_spec_delete_line_item"](1, 2),
+    "spec_change_status": lambda t: t["rsge_spec_change_status"](1, 2),
+    "spec_accept_status": lambda t: t["rsge_spec_accept_status"](1, 2),
+    "spec_refuse_status": lambda t: t["rsge_spec_refuse_status"](1),
+    "spec_correct_invoice": lambda t: t["rsge_spec_correct_invoice"](1, 11),
+    "spec_cancel_reason": lambda t: t["rsge_spec_cancel_reason"](1),
+    "spec_attach_advance": lambda t: t["rsge_spec_attach_advance"](1, 2, 3.0, 4),
+    "spec_detach_advance": lambda t: t["rsge_spec_detach_advance"](1, 2),
+    "spec_update_advance": lambda t: t["rsge_spec_update_advance"](1, 2, 3.0),
+    "spec_add_ssd": lambda t: t["rsge_spec_add_ssd"](1, 2, _DT),
+    "spec_add_ssaf": lambda t: t["rsge_spec_add_ssaf"](1, 2, _DT),
+    "spec_delete_ssd": lambda t: t["rsge_spec_delete_ssd"](1, 2, 3),
+    "spec_delete_ssaf": lambda t: t["rsge_spec_delete_ssaf"](1, 2, 3),
+    "spec_start_transport": lambda t: t["rsge_spec_start_transport"](1, _DT),
+    "spec_correct_transport_mark": lambda t: t["rsge_spec_correct_transport_mark"](1, 2),
+    "spec_correct_driver_info": lambda t: t["rsge_spec_correct_driver_info"](1, 2, 1),
+    "spec_save_invoice_request": lambda t: t["rsge_spec_save_invoice_request"](1, 2, 3, _DT),
 }
 
 
 def _register_all(fake: FakeMCP, ctx) -> None:
-    for module in (invoice, employees, waybill, ntos_invoice):
+    for module in (invoice, employees, waybill, ntos_invoice, spec_invoice):
         module.register(fake, ctx)
 
 
