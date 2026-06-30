@@ -6,7 +6,7 @@ rs.ge tax & logistics paperwork conversationally — *"is this company a VAT pay
 waybill for this shipment"*, *"list my unconfirmed invoices"* — instead of clicking through the
 rs.ge portal or writing API integration code.
 
-It currently exposes **90 tools** across 8 business areas, bridging both rs.ge API generations
+It currently exposes **124 tools** across 9 business areas, bridging both rs.ge API generations
 (modern REST/JSON eAPI + legacy SOAP/ASMX).
 
 ---
@@ -94,7 +94,38 @@ credit/debit-note corrections, seller/buyer invoice registers and request flows.
 
 ---
 
-## 4. Waybills (ზედნადები) — electronic transport documents 🚚
+## 4. NSAF special (oil/fuel) invoices ⛽
+
+Special invoices for the **petroleum/fuel sector** (NSAF — ნავთობპროდუქტების სპეციალური
+ანგარიშ-ფაქტურა) via the dedicated `SpecInvoicesService` — the full lifecycle with fuel-specific
+transport tracking and customs/excise sub-documents.
+
+**What you can do**
+- **Issue** a special invoice (the oil/transport header) and add / read / delete **line items**.
+- Attach **SSD (customs)** and **SSAF (excise)** sub-documents.
+- Run the **transport flow** — start transport, correct driver/vehicle in transit.
+- **Buyer** accept/refuse; **seller** status; **correct** (credit/debit note) and **cancel**.
+- **Advance/prepayment netting**; buyer↔seller **invoice requests**.
+- **Lookups** — oil/fuel products (for line items), org facilities (load/unload points), seller/buyer
+  invoice registers, printable form.
+
+**Business uses:** petroleum wholesale/retail invoicing, fuel transport documentation, excise/customs
+sub-document management.
+
+| Tool | Action |
+|---|---|
+| `rsge_spec_save_invoice` · `rsge_spec_save_line_item` / `rsge_spec_get_line_items` / `rsge_spec_delete_line_item` | Issue header · line items |
+| `rsge_spec_add_ssd` / `rsge_spec_add_ssaf` · `rsge_spec_get_ssds` / `rsge_spec_get_ssafs` · `rsge_spec_delete_ssd` / `rsge_spec_delete_ssaf` | SSD/SSAF sub-documents |
+| `rsge_spec_start_transport` · `rsge_spec_correct_driver_info` · `rsge_spec_correct_transport_mark` | Transport flow |
+| `rsge_spec_change_status` · `rsge_spec_accept_status` / `rsge_spec_refuse_status` · `rsge_spec_correct_invoice` · `rsge_spec_cancel_reason` | Status · correct · cancel |
+| `rsge_spec_attach_advance` / `rsge_spec_update_advance` / `rsge_spec_detach_advance` · `rsge_spec_get_attached_advances` / `rsge_spec_get_attachable_advances` | Advance netting |
+| `rsge_spec_get_invoice` · `rsge_spec_get_seller_invoices` / `rsge_spec_get_buyer_invoices` · `rsge_spec_print_invoice` | Reads |
+| `rsge_spec_get_products` / `rsge_spec_get_product` · `rsge_spec_get_org_objects` / `rsge_spec_get_my_org_objects` | Lookups |
+| `rsge_spec_save_invoice_request` · `rsge_spec_get_correction` · `rsge_spec_check_users` | Request · correction check · creds |
+
+---
+
+## 5. Waybills (ზედნადები) — electronic transport documents 🚚
 
 Waybills are **legally required to move goods within Georgia**. This is the highest-value
 automation area, and the MCP covers the complete lifecycle.
@@ -123,7 +154,7 @@ track outstanding vs. delivered shipments, validate counterparties, print/issue 
 
 ---
 
-## 5. Employee registry 👥
+## 6. Employee registry 👥
 
 Register and manage a taxpayer's employees (eAPI).
 
@@ -140,7 +171,7 @@ Register and manage a taxpayer's employees (eAPI).
 
 ---
 
-## 6. Customs declarations 🛃
+## 7. Customs declarations 🛃
 
 Read your ASYCUDA customs declarations (eAPI), for importers/exporters.
 
@@ -155,7 +186,7 @@ Read your ASYCUDA customs declarations (eAPI), for importers/exporters.
 
 ---
 
-## 7. Cash-register Z-reports 🧾
+## 8. Cash-register Z-reports 🧾
 
 Fiscal cash-register totals (SOAP `taxpayerservice`) — for accounting and audit.
 
@@ -170,7 +201,7 @@ Fiscal cash-register totals (SOAP `taxpayerservice`) — for accounting and audi
 
 ---
 
-## 8. Reference data, transactions & session 🔧
+## 9. Reference data, transactions & session 🔧
 
 Supporting tools the others build on.
 
@@ -219,20 +250,22 @@ overrides `RSGE_SOAP_BASE` / `RSGE_XDATA_BASE`.
 
 The rs.ge surface is **287 documented operations** (251 SOAP across 6 services + 36 REST across
 7 groups). We've shipped **90 tools** (~86 raw ops, ~30%) — but that **understates** real coverage:
-the shipped tools deliver **~65% of business value**, because they now complete the three
+the shipped tools deliver **~75% of business value**, because they now complete the four
 highest-traffic domains end-to-end (the **modern eAPI VAT-invoice lifecycle**, the **waybill
-workflow** incl. reference + party validation, and the **legacy ntos VAT-invoice** flows incl.
-advance netting / corrections / requests), plus employee registry, customs reads, cash-register
-Z-reports, and company/TIN due diligence. The remaining gap is mostly whole new domains (NSAF fuel
-invoices, duty-free) and low-value long-tails (diagnostics, portal-only helpers).
+workflow** incl. reference + party validation, the **legacy ntos VAT-invoice** flows incl. advance
+netting / corrections / requests, and the **NSAF oil/fuel special invoices** incl. transport tracking
++ SSD/SSAF sub-documents), plus employee registry, customs reads, cash-register Z-reports, and
+company/TIN due diligence. The remaining gap is one new domain (duty-free) and low-value long-tails
+(diagnostics, portal-only helpers).
 
 | Surface | Implemented | Total |
 |---|---|---|
 | REST / eAPI | ~26 | 36 |
 | SOAP — waybill | 29 | 56 |
 | SOAP — ntos (VAT) | 29 | 54 |
+| SOAP — specinvoices (NSAF fuel) | 34 | 45 |
 | SOAP — taxpayer (Z-reports) | 2 | 20 |
-| SOAP — NSAF / duty-free / parcels | 0 | 121 |
+| SOAP — duty-free / parcels | 0 | 76 |
 
 > **The honest target is ~95% *business-value* coverage (≈150–170 ops), not 100% raw-op parity.**
 > The long tail is deprecated forms, portal-only helpers, headless-impossible SMS/OTP flows, and
@@ -248,7 +281,7 @@ invoices, duty-free) and low-value long-tails (diagnostics, portal-only helpers)
 | ✅ **P3** | **Waybill** long-tail — reference catalogs (valid payloads), lifecycle completers (confirm/reject/cancel + send/close-with-date), identity helpers, by-number/PDF reads, waybill→invoice (→ 29/56). **Shipped (+22).** | ~22 | High | Med |
 | **P3b** | **Waybill** role-based + goods-list reads (`get_buyer_waybills`, `get_waybill_goods_list`, transporter views) with an order-preserving filter helper | ~6 | Med | Low |
 | ✅ **P4** | **ntos invoice** long-tail — advance/prepayment netting, corrections (credit/debit notes) + cancel, buyer accept/refuse, line items, invoice-request flow, identity glue (→ 29/54). **Shipped (+22).** | ~22 | High | High |
-| **P5** | **NSAF oil/fuel special invoices** (new domain — every petroleum wholesaler) | ~28 | High | High |
+| ✅ **P5** | **NSAF oil/fuel special invoices** (new domain) — issue header + line items, SSD/SSAF sub-docs, transport flow, accept/refuse, correction/cancel, advance netting, lookups (→ 34/45). **Shipped (+34).** | ~34 | High | High |
 | **P6** | **Duty-Free** goods journals (new — high value but only for licensed free-trade operators) | ~26 | Med | High |
 | **P7** | Income / taxpayer-profile / comparison-acts + personal income (some need an SMS OTP → human-in-the-loop) | ~12 | Med | Med |
 | **P8** | Cosmetic long-tail + OAuth delegation — *only if literal 100% is contractually required* (drive via WSDL codegen, don't hand-author) | ~80+ | Low | High |
