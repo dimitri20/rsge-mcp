@@ -4,12 +4,21 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rsge-mcp"
-version = "0.1.0"
-description = "MCP server for the rs.ge (Georgian Revenue Service) API"
+version = "0.2.0"
+description = "MCP server for the rs.ge (Georgian Revenue Service) API — tax, invoicing, waybill, and customs tools"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Dimitri Gulua" }]
+keywords = ["mcp", "model-context-protocol", "rs.ge", "georgia", "tax", "invoice", "waybill", "soap"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Accounting",
+    "Topic :: Software Development :: Libraries",
+]
 dependencies = [
     "mcp>=1.2.0",
     "httpx>=0.27",
@@ -17,6 +26,11 @@ dependencies = [
     "pydantic>=2.6",
     "lxml>=5.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/dimitri20/rsge-mcp"
+Repository = "https://github.com/dimitri20/rsge-mcp"
+Issues = "https://github.com/dimitri20/rsge-mcp/issues"
 
 [project.optional-dependencies]
 dev = [
