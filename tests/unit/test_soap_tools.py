@@ -1257,6 +1257,49 @@ async def test_df_requires_soap_credentials(settings) -> None:
             await fake.tools["rsge_df_get_units"]()
 
 
+# --- API drift (mid-2026): change_barter_status on ntos + specinvoices ---
+
+
+async def test_ntos_change_barter_status_order(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(NTOS.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar("change_barter_status", Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            ntos_invoice.register(fake, ctx)
+            await fake.tools["rsge_ntos_change_barter_status"](5, 1)
+        body = _content(route)
+        # WSDL order: inv_id, status, user_id, su, sp (su/sp LAST)
+        assert (
+            body.index("<inv_id>")
+            < body.index("<status>")
+            < body.index("<user_id>")
+            < body.index("<su>")
+            < body.index("<sp>")
+        )
+
+
+async def test_spec_change_barter_status_order(soap_settings) -> None:
+    with respx.mock as router:
+        route = router.post(SPECINVOICES.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar("change_barter_status", Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            spec_invoice.register(fake, ctx)
+            await fake.tools["rsge_spec_change_barter_status"](5, 1)
+        body = _content(route)
+        # WSDL order quirk: status comes AFTER su/sp here
+        assert (
+            body.index("<invoice_id>")
+            < body.index("<user_id>")
+            < body.index("<su>")
+            < body.index("<sp>")
+            < body.index("<status>")
+        )
+
+
 # --- per-service XML namespace + SOAPAction (live-verified: a wrong namespace is
 # rejected outright by the server with "did not recognize ... SOAPAction") ---
 

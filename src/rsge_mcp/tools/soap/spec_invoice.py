@@ -638,3 +638,26 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
         return await ctx.soap.call(
             SPECINVOICES, "check_spec_users", {"user_id": user_id, "su": su.su, "sp": su.sp}
         )
+
+    @mcp.tool()
+    async def rsge_spec_change_barter_status(invoice_id: int, status: int, user_id: int = 0) -> Any:
+        """Change a special invoice's BARTER status (SOAP ``change_barter_status``).
+        WRITE — not auto-retried.
+
+        Added to the rs.ge API in mid-2026. WSDL order quirk: `status` comes AFTER
+        `su`/`sp` here (unlike the ntos variant). `status` is an rs.ge int code (not
+        enumerated in the WSDL — confirm against current rs.ge docs).
+        """
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(
+            SPECINVOICES,
+            "change_barter_status",
+            {
+                "invoice_id": invoice_id,
+                "user_id": user_id,
+                "su": su.su,
+                "sp": su.sp,
+                "status": status,
+            },
+            write=True,
+        )

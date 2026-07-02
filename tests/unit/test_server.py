@@ -104,6 +104,7 @@ EXPECTED_TOOLS = {
     "rsge_ntos_get_un_id_from_tin",
     "rsge_ntos_get_un_id_from_user_id",
     "rsge_ntos_get_org_name_from_un_id",
+    "rsge_ntos_change_barter_status",  # added by rs.ge mid-2026 (API drift)
     # NSAF special (oil/fuel) invoices (P5)
     "rsge_spec_save_invoice",
     "rsge_spec_save_line_item",
@@ -139,6 +140,7 @@ EXPECTED_TOOLS = {
     "rsge_spec_print_invoice",
     "rsge_spec_save_invoice_request",
     "rsge_spec_check_users",
+    "rsge_spec_change_barter_status",  # added by rs.ge mid-2026 (API drift)
     # Duty-free goods journals (P6)
     "rsge_df_save_goods_in",
     "rsge_df_update_goods_in",

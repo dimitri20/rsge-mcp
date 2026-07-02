@@ -6,7 +6,7 @@ rs.ge tax & logistics paperwork conversationally — *"is this company a VAT pay
 waybill for this shipment"*, *"list my unconfirmed invoices"* — instead of clicking through the
 rs.ge portal or writing API integration code.
 
-It currently exposes **145 tools** across 10 business areas, bridging both rs.ge API generations
+It currently exposes **147 tools** across 10 business areas, bridging both rs.ge API generations
 (modern REST/JSON eAPI + legacy SOAP/ASMX).
 
 ---
@@ -270,8 +270,8 @@ overrides `RSGE_SOAP_BASE` / `RSGE_XDATA_BASE`.
 
 ## Coverage vs. the full rs.ge API
 
-The rs.ge surface is **287 documented operations** (251 SOAP across 6 services + 36 REST across
-7 groups). We've shipped **145 tools** (~140 raw ops, ~49%) — but that **understates** real coverage:
+The rs.ge surface is **289 documented operations** (253 SOAP across 6 services + 36 REST across
+7 groups). We've shipped **147 tools** (~140 raw ops, ~49%) — but that **understates** real coverage:
 the shipped tools deliver **~85% of business value**, because **all five SOAP record-domains plus the
 modern eAPI invoice flow are now wired end-to-end** — the modern eAPI VAT-invoice lifecycle, the
 waybill workflow, the legacy ntos VAT-invoice flows, the NSAF oil/fuel special invoices, and the
@@ -283,8 +283,8 @@ company/TIN due diligence. **No new domains remain**; the gap is now intra-domai
 |---|---|---|
 | REST / eAPI | ~26 | 36 |
 | SOAP — waybill | 29 | 56 |
-| SOAP — ntos (VAT) | 29 | 54 |
-| SOAP — specinvoices (NSAF fuel) | 34 | 45 |
+| SOAP — ntos (VAT) | 30 | 55 |
+| SOAP — specinvoices (NSAF fuel) | 35 | 46 |
 | SOAP — dutyfree | 20 | 72 |
 | SOAP — taxpayer (income / Z-reports) | 2 | 20 |
 | SOAP — custompost (parcels) | 0 | 4 |
@@ -308,7 +308,7 @@ company/TIN due diligence. **No new domains remain**; the gap is now intra-domai
 | **P7** | Income / taxpayer-profile / comparison-acts + personal income (some need an SMS OTP → human-in-the-loop) | ~12 | Med | Med |
 | **P8** | Cosmetic long-tail + OAuth delegation — *only if literal 100% is contractually required* (drive via WSDL codegen, don't hand-author) | ~80+ | Low | High |
 
-**P0–P6 are shipped (145 tools, ~85% of business value). All new domains are now covered** — what
+**P0–P6 are shipped (147 tools, ~85% of business value). All new domains are now covered** — what
 remains is "harden & ship" (end-user README + publish + live verification), the small **P3b** waybill
 reads, and the **P7** income/taxpayer-profile group; **P8** (cosmetic + OAuth) stays out of scope.
 

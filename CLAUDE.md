@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Two things live here:
 
 1. **The rs.ge MCP server** (`src/rsge_mcp/`) — an MCP server exposing the Georgian Revenue
-   Service API as LLM tools. **Both generations are implemented** (145 tools across 10 business
+   Service API as LLM tools. **Both generations are implemented** (147 tools across 10 business
    areas): the modern REST/eAPI surface plus five legacy SOAP services (waybills, ntos VAT invoices,
    NSAF special invoices, duty-free, taxpayer Z-reports). See `FEATURES.md` for the capability map
    and coverage roadmap, and `SUMMARY.md` §7 for the overall plan.
@@ -76,7 +76,7 @@ artifacts are:
 
 The rs.ge API splits into **two generations** that an MCP must bridge differently:
 
-- **Legacy SOAP/`.asmx`** — 6 services, ~251 operations (Waybills, VAT invoices, NSAF, Duty-Free,
+- **Legacy SOAP/`.asmx`** — 6 services, ~253 operations (Waybills, VAT invoices, NSAF, Duty-Free,
   taxpayer/income/Z-reports, parcels/cargo). Auth = **service-user** credentials passed in each SOAP
   body. The **WSDL is the authoritative operation list**; Postman collections ship only a working
   *subset* of samples — never treat Postman as the full surface.

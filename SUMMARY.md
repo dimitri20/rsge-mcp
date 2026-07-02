@@ -62,9 +62,9 @@ Postman samples:
 
 | Transport | Services / groups | Operations / endpoints |
 |---|---|---|
-| **SOAP (`.asmx`)** | 6 services | **251 operations** |
+| **SOAP (`.asmx`)** | 6 services | **253 operations** |
 | **REST/JSON** (`eapi.rs.ge`, `xdata.rs.ge`, OAuth) | 7 groups | **36 endpoints** |
-| **Total documented** | 13 | **≈ 287** |
+| **Total documented** | 13 | **≈ 289** |
 
 SOAP breakdown (from each service's WSDL):
 
@@ -103,8 +103,8 @@ Legend — **Transport**: SOAP / REST / Other. **PM** = Postman collection shipp
 | # | Service (GE → EN) | Doc | Transport | Endpoint | PM |
 |--|--|--|--|--|:--:|
 | 1 | ზედნადები → **Waybills** | waybill_protocol.pdf | SOAP | WayBillService.asmx (56 ops) | ✅ |
-| 2 | ანგარიშ-ფაქტურა → **VAT invoices** | invoice-protocol.pdf | SOAP | ntosservice.asmx (54 ops) | ✅ |
-| 3 | ნსაფ → **NSAF special invoices** | NSAF_PROTOKOL.pdf | SOAP | SpecInvoicesService.asmx (45 ops) | ✅ |
+| 2 | ანგარიშ-ფაქტურა → **VAT invoices** | invoice-protocol.pdf | SOAP | ntosservice.asmx (55 ops) | ✅ |
+| 3 | ნსაფ → **NSAF special invoices** | NSAF_PROTOKOL.pdf | SOAP | SpecInvoicesService.asmx (46 ops) | ✅ |
 | 4 | საფოსტო გზავნილები → **Postal parcels** | ParcelProtocol.pdf | SOAP | custompostservice.asmx (4 ops) | — |
 | 5 | **Duty-Free** | dutyfree_protocol.pdf | SOAP | wsdutyfree.asmx (72 ops) | — |
 | 6 | ტვირთების გადაზიდვა → **Cargo** | Cargo-Delivery.pdf | SOAP | custompostservice.asmx (shared) | — |

@@ -5,7 +5,7 @@ API. It exposes Georgian tax, invoicing, and customs operations as tools an LLM 
 Desktop/Code, MCP Inspector, any MCP host) can call — so you can do rs.ge paperwork
 conversationally instead of clicking through the portal or hand-rolling API integrations.
 
-**145 tools across 10 business areas**, bridging both rs.ge API generations (modern REST/JSON
+**147 tools across 10 business areas**, bridging both rs.ge API generations (modern REST/JSON
 eAPI + the legacy SOAP/`.asmx` services). See **[FEATURES.md](FEATURES.md)** for the full
 capability map.
 
