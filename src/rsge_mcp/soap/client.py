@@ -76,9 +76,14 @@ class SoapClient:
                 "set RSGE_ALLOW_WRITES=1 to enable writes"
             )
         envelope = self.build_request(service, operation, params)
+        # SOAPAction = targetNamespace + operation joined with exactly one "/": tempuri and
+        # DutyFreeService/ end in a slash; services.rs.ge does not (its WSDL actions are
+        # "services.rs.ge/Op"). The body xmlns uses the namespace verbatim.
+        ns = service.namespace
+        action = f"{ns}{operation}" if ns.endswith("/") else f"{ns}/{operation}"
         headers = {
             "Content-Type": "text/xml; charset=utf-8",
-            "SOAPAction": f'"{service.namespace}{operation}"',
+            "SOAPAction": f'"{action}"',
         }
         target = _apply_soap_base(service.endpoint, self._settings.hosts.soap_base)
         await self._rate.acquire()
