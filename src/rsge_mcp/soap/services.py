@@ -1,7 +1,10 @@
 """SOAP service metadata (endpoint + XML namespace).
 
-All rs.ge .asmx services use the ASP.NET default namespace ``http://tempuri.org/`` and
-SOAP 1.1. Endpoints mirror the ``soap`` section of ``endpoints.json``.
+Most rs.ge .asmx services use the ASP.NET default namespace ``http://tempuri.org/``, but
+NOT all: ``wsdutyfree`` uses ``DutyFreeService/`` and ``taxpayerservice`` uses
+``services.rs.ge`` (no trailing slash) — each WSDL's ``targetNamespace`` is authoritative,
+and a wrong namespace makes the server reject the SOAPAction header outright (verified
+live). All are SOAP 1.1. Endpoints mirror the ``soap`` section of ``endpoints.json``.
 """
 
 from __future__ import annotations
@@ -31,6 +34,7 @@ NTOS = SoapService(
 TAXPAYER = SoapService(
     name="taxpayerservice",
     endpoint="https://services.rs.ge/taxservice/taxpayerservice.asmx",
+    namespace="services.rs.ge",  # per WSDL targetNamespace — no trailing slash
 )
 
 # NSAF special (oil/fuel) invoices. Note the distinct host: webserv.rs.ge.
@@ -43,4 +47,5 @@ SPECINVOICES = SoapService(
 DUTYFREE = SoapService(
     name="wsdutyfree",
     endpoint="https://webserv.rs.ge/dutyfree/wsdutyfree.asmx",
+    namespace="DutyFreeService/",  # per WSDL targetNamespace — NOT tempuri.org
 )

@@ -1255,3 +1255,73 @@ async def test_df_requires_soap_credentials(settings) -> None:
         dutyfree.register(fake, ctx)
         with pytest.raises(RsgeConfigError):
             await fake.tools["rsge_df_get_units"]()
+
+
+# --- per-service XML namespace + SOAPAction (live-verified: a wrong namespace is
+# rejected outright by the server with "did not recognize ... SOAPAction") ---
+
+
+@pytest.mark.parametrize(
+    "module,tool,args,service,op,ns,action",
+    [
+        (
+            waybill,
+            "rsge_get_waybill_types",
+            (),
+            WAYBILL,
+            "get_waybill_types",
+            "http://tempuri.org/",
+            "http://tempuri.org/get_waybill_types",
+        ),
+        (
+            ntos_invoice,
+            "rsge_ntos_check_service_user",
+            (),
+            NTOS,
+            "chek",
+            "http://tempuri.org/",
+            "http://tempuri.org/chek",
+        ),
+        (
+            spec_invoice,
+            "rsge_spec_check_users",
+            (),
+            SPECINVOICES,
+            "check_spec_users",
+            "http://tempuri.org/",
+            "http://tempuri.org/check_spec_users",
+        ),
+        (
+            dutyfree,
+            "rsge_df_get_units",
+            (),
+            DUTYFREE,
+            "get_units",
+            "DutyFreeService/",
+            "DutyFreeService/get_units",
+        ),
+        (
+            taxpayer,
+            "rsge_get_z_report_sum",
+            ("A", "B"),
+            TAXPAYER,
+            "Get_Z_Report_Sum",
+            "services.rs.ge",
+            "services.rs.ge/Get_Z_Report_Sum",
+        ),
+    ],
+)
+async def test_service_namespace_and_soapaction(
+    soap_settings, module, tool, args, service, op, ns, action
+) -> None:
+    with respx.mock as router:
+        route = router.post(service.endpoint).mock(
+            return_value=httpx.Response(200, text=soap_scalar(op, Result="1"))
+        )
+        async with make_ctx(soap_settings) as ctx:
+            fake = FakeMCP()
+            module.register(fake, ctx)
+            await fake.tools[tool](*args)
+        req = route.calls.last.request
+        assert f'<{op} xmlns="{ns}">' in req.content.decode()  # WSDL targetNamespace verbatim
+        assert req.headers["SOAPAction"] == f'"{action}"'  # ns + op joined with ONE slash
