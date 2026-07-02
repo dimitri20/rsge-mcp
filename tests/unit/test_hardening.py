@@ -171,3 +171,82 @@ def test_main_reports_config_error_cleanly(monkeypatch, capsys) -> None:
     assert exc_info.value.code == 1
     err = capsys.readouterr().err
     assert "configuration error" in err and "Traceback" not in err
+
+
+# --- second-round review fixes ---
+
+
+@pytest.mark.asyncio
+async def test_soap_base_ignored_warns_per_service(soap_settings, caplog) -> None:
+    import dataclasses
+    import logging as _logging
+
+    import rsge_mcp.soap.client as soap_client_mod
+    from rsge_mcp.soap.services import DUTYFREE
+
+    cfg = dataclasses.replace(
+        soap_settings,
+        hosts=dataclasses.replace(soap_settings.hosts, soap_base="services-test.rs.ge"),
+    )
+    soap_client_mod._soap_base_warned.clear()
+    with respx.mock as router:
+        router.post(DUTYFREE.endpoint).mock(  # NOT rewritten: goes to production endpoint
+            return_value=httpx.Response(
+                200,
+                text='<e xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">'
+                "<soap:Body><get_unitsResponse><r>1</r></get_unitsResponse></soap:Body></e>",
+            )
+        )
+        async with httpx.AsyncClient() as http:
+            from rsge_mcp.rest.rate_limit import RateLimiter
+            from rsge_mcp.soap.client import SoapClient
+
+            sc = SoapClient(cfg, http, RateLimiter(0.0))
+            with caplog.at_level(_logging.WARNING, logger="rsge_mcp.soap.client"):
+                await sc.call(DUTYFREE, "get_units", {"userName": "u", "password": "p"})
+                await sc.call(DUTYFREE, "get_units", {"userName": "u", "password": "p"})
+    warnings = [r for r in caplog.records if "PRODUCTION" in r.getMessage()]
+    assert len(warnings) == 1  # loud, but once per service
+
+
+def test_rsge_dotenv_missing_file_raises(monkeypatch, tmp_path) -> None:
+    from rsge_mcp.config import load_env_file
+    from rsge_mcp.errors import RsgeConfigError
+
+    monkeypatch.setenv("RSGE_DOTENV", str(tmp_path / "nope.env"))
+    with pytest.raises(RsgeConfigError, match="does not point to a readable file"):
+        load_env_file()
+
+
+def test_rsge_dotenv_empty_file_is_fine(monkeypatch, tmp_path) -> None:
+    from rsge_mcp.config import load_env_file
+
+    empty = tmp_path / "placeholder.env"
+    empty.write_text("# all values come from the MCP client env block\n")
+    monkeypatch.setenv("RSGE_DOTENV", str(empty))
+    load_env_file()  # must not raise
+
+
+def test_dotenv_discovery_does_not_walk_up(monkeypatch, tmp_path) -> None:
+    from rsge_mcp.config import load_env_file
+
+    (tmp_path / ".env").write_text("RSGE_SENTINEL_PARENT=1\n")
+    child = tmp_path / "child"
+    child.mkdir()
+    monkeypatch.delenv("RSGE_DOTENV", raising=False)
+    monkeypatch.delenv("RSGE_SENTINEL_PARENT", raising=False)
+    monkeypatch.chdir(child)
+    load_env_file()
+    import os
+
+    assert "RSGE_SENTINEL_PARENT" not in os.environ  # parent .env NOT silently adopted
+
+
+def test_build_server_loads_env_before_logging(monkeypatch) -> None:
+    import rsge_mcp.server as server_mod
+
+    order: list[str] = []
+    monkeypatch.setattr(server_mod, "load_env_file", lambda: order.append("env"))
+    monkeypatch.setattr(server_mod, "setup_logging", lambda: order.append("logging"))
+    server_mod.build_server()  # uses real load_settings with ambient env (test default)
+    assert order[:2] == ["env", "logging"]  # RSGE_LOG_LEVEL from .env must be visible

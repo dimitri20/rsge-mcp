@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 
-from dotenv import find_dotenv, load_dotenv
+from dotenv import load_dotenv
 
 from .errors import RsgeConfigError
 from .logging import get_logger
@@ -77,26 +77,32 @@ class Settings:
         return bool(self.soap_user and self.soap_tin and self.soap_password)
 
 
-def _load_env_file() -> None:
-    """Load a ``.env``: explicit ``RSGE_DOTENV`` path first, else search from the cwd.
+def load_env_file() -> None:
+    """Load a ``.env``: explicit ``RSGE_DOTENV`` path first, else ``./.env`` (cwd ONLY).
 
     Bare ``load_dotenv()`` searches from the *package* location, which finds nothing for
-    pipx/uvx installs; ``usecwd=True`` searches from the process working directory (what
-    an MCP client launching the server actually provides).
+    pipx/uvx installs. Discovery is deliberately restricted to the process working
+    directory itself — walking up parent directories could silently adopt an unrelated
+    project's ``.env`` (including ``RSGE_ALLOW_WRITES`` or production credentials).
+    Idempotent: already-set process env vars always win (dotenv does not override).
     """
     import os
 
     explicit = (os.environ.get("RSGE_DOTENV") or "").strip()
     if explicit:
-        loaded = load_dotenv(explicit)
-        if not loaded:
-            raise RsgeConfigError(f"RSGE_DOTENV points to an unreadable file: {explicit!r}")
-        log.info("loaded environment from RSGE_DOTENV=%s", explicit)
+        # Don't infer readability from load_dotenv's return value — it also returns
+        # False for a readable file that defines no variables (empty/comments-only).
+        if not os.path.isfile(explicit):
+            raise RsgeConfigError(f"RSGE_DOTENV does not point to a readable file: {explicit!r}")
+        if not load_dotenv(explicit):
+            log.warning("RSGE_DOTENV=%s defined no variables (empty/comments-only)", explicit)
+        else:
+            log.info("loaded environment from RSGE_DOTENV=%s", explicit)
         return
-    found = find_dotenv(usecwd=True)
-    if found:
-        load_dotenv(found)
-        log.info("loaded environment from %s", found)
+    cwd_env = os.path.join(os.getcwd(), ".env")
+    if os.path.isfile(cwd_env):
+        load_dotenv(cwd_env)
+        log.info("loaded environment from %s", cwd_env)
 
 
 def _clean(value: str | None) -> str | None:
@@ -129,7 +135,7 @@ def _parse_int(raw: str, name: str) -> int:
 def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
     """Build a validated ``Settings`` from environment variables."""
     if environ is None:
-        _load_env_file()
+        load_env_file()
         import os
 
         environ = os.environ
