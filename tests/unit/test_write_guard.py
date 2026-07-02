@@ -56,7 +56,7 @@ _SPEC_DESC = SpecInvoiceDesc(
     p_drg_type=1,
 )
 
-# Every mutating tool, with minimal valid arguments. Must list ALL 70 writes.
+# Every mutating tool, with minimal valid arguments. Must list ALL 72 writes.
 WRITE_CALLS = {
     "save_invoice": lambda t: t["rsge_save_invoice"](
         seller_tin="1",
@@ -174,6 +174,9 @@ WRITE_CALLS = {
     "df_update_goods_out": lambda t: t["rsge_df_update_goods_out"](1, _DT, 1.0, 1.0, 1),
     "df_send_goods_out": lambda t: t["rsge_df_send_goods_out"](1, _DT, 1.0, 1.0, 1),
     "df_delete_goods_out": lambda t: t["rsge_df_delete_goods_out"](1),
+    # API drift (mid-2026): barter status
+    "ntos_change_barter_status": lambda t: t["rsge_ntos_change_barter_status"](1, 1),
+    "spec_change_barter_status": lambda t: t["rsge_spec_change_barter_status"](1, 1),
 }
 
 

@@ -611,3 +611,19 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
             "get_org_name_from_un_id",
             {"user_id": user_id, "un_id": un_id, "su": su.su, "sp": su.sp},
         )
+
+    @mcp.tool()
+    async def rsge_ntos_change_barter_status(invoice_id: int, status: int, user_id: int = 0) -> Any:
+        """Change a VAT invoice's BARTER status (ntos SOAP ``change_barter_status``).
+        WRITE — not auto-retried.
+
+        Added to the rs.ge API in mid-2026; `status` is an rs.ge int code (not enumerated
+        in the WSDL — confirm against current rs.ge docs).
+        """
+        su = service_user_or_raise(ctx.settings)
+        return await ctx.soap.call(
+            NTOS,
+            "change_barter_status",
+            {"inv_id": invoice_id, "status": status, "user_id": user_id, "su": su.su, "sp": su.sp},
+            write=True,
+        )
