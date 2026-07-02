@@ -205,6 +205,35 @@ async def test_write_allowed_when_enabled(soap_settings) -> None:
         assert res == {"del_waybillResult": "1"}
 
 
+async def test_write_calls_covers_every_write_tool_in_source() -> None:
+    """Completeness: WRITE_CALLS must track the source of truth, not a hand count.
+
+    Every mutating tool passes ``write=True`` to the transport exactly once, so the
+    number of ``write=True`` keyword call sites (counted via AST — docstring mentions
+    don't count) under ``src/rsge_mcp/tools/`` equals the number of write tools. If
+    someone adds a write tool without extending WRITE_CALLS, this fails.
+    """
+    import ast
+    import pathlib
+
+    tools_dir = pathlib.Path(__file__).resolve().parents[2] / "src" / "rsge_mcp" / "tools"
+    sites = 0
+    for py in tools_dir.rglob("*.py"):
+        for node in ast.walk(ast.parse(py.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Call):
+                for kw in node.keywords:
+                    if (
+                        kw.arg == "write"
+                        and isinstance(kw.value, ast.Constant)
+                        and kw.value.value is True
+                    ):
+                        sites += 1
+    assert sites == len(WRITE_CALLS), (
+        f"{sites} write=True call sites in src/rsge_mcp/tools/ but {len(WRITE_CALLS)} "
+        "entries in WRITE_CALLS — add the new write tool(s) to the guard test"
+    )
+
+
 async def test_reads_not_blocked_in_readonly(soap_settings) -> None:
     readonly = dataclasses.replace(soap_settings, allow_writes=False)
     with respx.mock as router:

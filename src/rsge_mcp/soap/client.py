@@ -22,16 +22,26 @@ from .services import SoapService
 log = get_logger("soap.client")
 
 
+# RSGE_SOAP_BASE only makes sense for services hosted on services.rs.ge — the test host
+# (services-test.rs.ge) mirrors that host's paths. ntos (www.revenue.mof.ge) and the
+# webserv.rs.ge services have no equivalent there; rewriting them would 404.
+_OVERRIDABLE_HOSTS = frozenset({"services.rs.ge"})
+
+
 def _apply_soap_base(endpoint: str, soap_base: str | None) -> str:
     """Rewrite the scheme+netloc of ``endpoint`` to ``soap_base``, keeping path/query.
 
     Lets ``RSGE_SOAP_BASE`` point SOAP calls at a test host (e.g. services-test.rs.ge)
-    while preserving each service's own ``.asmx`` path. ``soap_base`` may be a bare host,
-    a scheme+host, or carry a trailing slash — only its scheme and netloc are used.
+    while preserving each service's own ``.asmx`` path. Only applies to endpoints whose
+    production host is ``services.rs.ge`` (waybill/taxpayer/custompost) — the other SOAP
+    hosts have no counterpart on the test host and are left untouched. ``soap_base`` may
+    be a bare host, a scheme+host, or carry a trailing slash — only scheme+netloc are used.
     """
     if not soap_base:
         return endpoint
     ep = urlsplit(endpoint)
+    if ep.netloc not in _OVERRIDABLE_HOSTS:
+        return endpoint
     base = urlsplit(soap_base if "//" in soap_base else f"//{soap_base}")
     # A bare host (no scheme) lands in base.path, not base.netloc.
     return urlunsplit(
@@ -87,6 +97,7 @@ class SoapClient:
         }
         target = _apply_soap_base(service.endpoint, self._settings.hosts.soap_base)
         await self._rate.acquire()
+        log.debug("SOAP %s -> %s", operation, target)
         try:
             resp = await self._http.post(
                 target,
@@ -99,10 +110,11 @@ class SoapClient:
         except httpx.HTTPError as exc:
             raise RsgeHttpError(f"SOAP {operation} failed: {exc}") from exc
 
+        log.debug("SOAP %s <- HTTP %d (%d bytes)", operation, resp.status_code, len(resp.text))
         # SOAP faults come back as HTTP 500; let parse() surface the faultstring.
         if resp.status_code not in (200, 500):
             raise RsgeHttpError(
                 f"SOAP {operation} returned HTTP {resp.status_code}",
                 status_code=resp.status_code,
             )
-        return parse(resp.text, operation)
+        return parse(resp.text, operation, status_code=resp.status_code)

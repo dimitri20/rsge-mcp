@@ -25,6 +25,10 @@ from .rate_limit import RateLimiter
 log = get_logger("auth")
 
 EXPIRY_SKEW_SECONDS = 120.0
+# Used when Authenticate returns no/degenerate EXPIRES_IN: without a fallback the cached
+# token would be born expired and EVERY tool call would re-login (and re-fire SMS on 2FA
+# accounts).
+FALLBACK_TTL_SECONDS = 600.0
 
 
 class EapiSession:
@@ -126,7 +130,15 @@ class EapiSession:
             return None
         self._token = str(token)
         expires = float(_get(data, "EXPIRES_IN") or 0)
-        self._expires_at = self._clock() + max(0.0, expires - EXPIRY_SKEW_SECONDS)
+        ttl = expires - EXPIRY_SKEW_SECONDS
+        if ttl <= 0:
+            log.warning(
+                "Authenticate returned EXPIRES_IN=%r; using fallback TTL of %.0fs",
+                _get(data, "EXPIRES_IN"),
+                FALLBACK_TTL_SECONDS,
+            )
+            ttl = FALLBACK_TTL_SECONDS
+        self._expires_at = self._clock() + ttl
         self._pin_token = None
         return self._token
 

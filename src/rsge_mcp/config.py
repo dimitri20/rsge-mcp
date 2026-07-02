@@ -12,9 +12,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 from .errors import RsgeConfigError
+from .logging import get_logger
+
+log = get_logger("config")
 
 # Public, documented test credentials (2FA-off). Injected ONLY when RSGE_ENV=test and
 # no real credentials are provided. See docs/text/*eAPI* and the Postman collections.
@@ -74,6 +77,28 @@ class Settings:
         return bool(self.soap_user and self.soap_tin and self.soap_password)
 
 
+def _load_env_file() -> None:
+    """Load a ``.env``: explicit ``RSGE_DOTENV`` path first, else search from the cwd.
+
+    Bare ``load_dotenv()`` searches from the *package* location, which finds nothing for
+    pipx/uvx installs; ``usecwd=True`` searches from the process working directory (what
+    an MCP client launching the server actually provides).
+    """
+    import os
+
+    explicit = (os.environ.get("RSGE_DOTENV") or "").strip()
+    if explicit:
+        loaded = load_dotenv(explicit)
+        if not loaded:
+            raise RsgeConfigError(f"RSGE_DOTENV points to an unreadable file: {explicit!r}")
+        log.info("loaded environment from RSGE_DOTENV=%s", explicit)
+        return
+    found = find_dotenv(usecwd=True)
+    if found:
+        load_dotenv(found)
+        log.info("loaded environment from %s", found)
+
+
 def _clean(value: str | None) -> str | None:
     """Normalize an env value: strip, treat empty as unset."""
     if value is None:
@@ -104,7 +129,7 @@ def _parse_int(raw: str, name: str) -> int:
 def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
     """Build a validated ``Settings`` from environment variables."""
     if environ is None:
-        load_dotenv()
+        _load_env_file()
         import os
 
         environ = os.environ
@@ -124,6 +149,12 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
     password = _clean(environ.get("RSGE_EAPI_PASSWORD"))
     if env == "test" and not username and not password:
         username, password = TEST_EAPI_USERNAME, TEST_EAPI_PASSWORD
+        log.warning(
+            "no eAPI credentials configured — using the PUBLIC rs.ge test account (%s). "
+            "Data you see belongs to the shared test identity, not you. Set "
+            "RSGE_EAPI_USERNAME/RSGE_EAPI_PASSWORD (and RSGE_ENV=prod) for real use.",
+            TEST_EAPI_USERNAME,
+        )
 
     pin = _clean(environ.get("RSGE_PIN"))
     if two_factor_mode is TwoFactorMode.STATIC_PIN and not pin:

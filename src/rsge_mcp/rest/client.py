@@ -35,6 +35,9 @@ log = get_logger("client")
 MAX_READ_RETRIES = 2
 RETRYABLE_STATUS = frozenset({429, 502, 503, 504})
 _BACKOFFS = (0.5, 1.5)
+# Honor a 429 Retry-After only up to this many seconds; a hostile/huge header must not
+# hang the tool call for minutes.
+RETRY_AFTER_CAP = 30.0
 
 
 class RestClient:
@@ -74,6 +77,9 @@ class RestClient:
                 f"refusing to call {path}: server is read-only — "
                 "set RSGE_ALLOW_WRITES=1 to enable writes"
             )
+        # Structural guarantee, not convention: a write is NEVER retried, regardless of
+        # what the caller passed for retry_reads (duplicate submissions have legal weight).
+        retry_reads = retry_reads and not write
         try:
             return await self._attempt(
                 path, body, auth=auth, retry_reads=retry_reads, base=base, method=method
@@ -116,20 +122,24 @@ class RestClient:
         last: Exception | None = None
         for i in range(attempts):
             await self._rate.acquire()
+            log.debug("%s %s (attempt %d/%d)", method, url, i + 1, attempts)
             try:
                 return await post_json(
                     self._http, url, body, headers, self._settings.http_timeout, method
                 )
             except RsgeTimeoutError as exc:
+                log.debug("%s %s timed out (attempt %d/%d)", method, url, i + 1, attempts)
                 last = exc
             except RsgeHttpError as exc:
                 if not (retry_reads and exc.status_code in RETRYABLE_STATUS):
                     raise
+                log.debug("%s %s -> HTTP %s; will retry", method, url, exc.status_code)
                 last = exc
             if i < attempts - 1:
                 delay = _BACKOFFS[min(i, len(_BACKOFFS) - 1)]
                 if isinstance(last, RsgeHttpError) and last.retry_after:
-                    delay = max(delay, last.retry_after)  # honor a 429 Retry-After
+                    # Honor a 429 Retry-After, but capped — never hang for minutes.
+                    delay = max(delay, min(last.retry_after, RETRY_AFTER_CAP))
                 await self._sleep(delay)
         assert last is not None
         raise last
