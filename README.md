@@ -5,7 +5,7 @@ API. It exposes Georgian tax, invoicing, and customs operations as tools an LLM 
 Desktop/Code, MCP Inspector, any MCP host) can call — so you can do rs.ge paperwork
 conversationally instead of clicking through the portal or hand-rolling API integrations.
 
-**144 tools across 10 business areas**, bridging both rs.ge API generations (modern REST/JSON
+**145 tools across 10 business areas**, bridging both rs.ge API generations (modern REST/JSON
 eAPI + the legacy SOAP/`.asmx` services). See **[FEATURES.md](FEATURES.md)** for the full
 capability map.
 
@@ -51,6 +51,8 @@ Most-used settings (full list + comments in `.env.example`):
 | `RSGE_EAPI_USERNAME` / `RSGE_EAPI_PASSWORD` | eAPI (REST) bearer-token login |
 | `RSGE_2FA_MODE` / `RSGE_PIN` | SMS-OTP handling: `off` / `static_pin` / `tool` |
 | `RSGE_SOAP_USER` / `RSGE_SOAP_TIN` / `RSGE_SOAP_PASSWORD` | SOAP service-user (waybills, invoices, duty-free, …) |
+| `RSGE_LOG_LEVEL` | stderr log level (`DEBUG` logs every HTTP/SOAP request for diagnostics) |
+| `RSGE_DOTENV` | explicit `.env` path (for pipx/uvx installs where the cwd isn't your project) |
 
 **Auth models:** the modern eAPI uses a bearer token (lazy login + caching, optional SMS 2FA); the
 legacy SOAP services use a **service-user** you create inside your rs.ge account (passed in each

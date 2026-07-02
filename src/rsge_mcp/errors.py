@@ -61,7 +61,11 @@ class RsgePinRequiredError(RsgeError):
         self.pin_token = pin_token
         self.masked_mobile = masked_mobile
         suffix = f" (code sent to {masked_mobile})" if masked_mobile else ""
-        super().__init__(f"Two-factor PIN required to complete rs.ge login{suffix}.")
+        super().__init__(
+            f"Two-factor PIN required to complete rs.ge login{suffix}. "
+            "Submit it with the rsge_submit_pin tool — do NOT retry the original call "
+            "first (each retried login sends a new SMS)."
+        )
 
 
 class RsgeHttpError(RsgeError):

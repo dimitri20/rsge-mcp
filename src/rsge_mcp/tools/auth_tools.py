@@ -1,10 +1,8 @@
-"""Session tools: sign out, and (in 2FA tool mode) submit the SMS PIN."""
+"""Session tools: sign out, and submit the SMS two-factor PIN."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-
-from ..config import TwoFactorMode
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
@@ -21,11 +19,17 @@ def register(mcp: FastMCP, ctx: AppContext) -> None:
         ctx.session.invalidate()
         return "Signed out."
 
-    # Only expose the PIN tool when 2FA is handled interactively.
-    if ctx.settings.two_factor_mode is TwoFactorMode.TOOL:
+    # Registered in EVERY 2FA mode: an account with SMS 2FA raises RsgePinRequiredError
+    # even when RSGE_2FA_MODE is left at "off", and without this tool that state is a
+    # dead end where each retried login fires another SMS. submit_pin works whenever a
+    # PIN_TOKEN is pending, regardless of mode.
+    @mcp.tool()
+    async def rsge_submit_pin(pin: str) -> str:
+        """Submit the SMS two-factor PIN to finish signing in to rs.ge.
 
-        @mcp.tool()
-        async def rsge_submit_pin(pin: str) -> str:
-            """Submit the SMS two-factor PIN to finish signing in to rs.ge."""
-            await ctx.session.submit_pin(pin)
-            return "PIN accepted; session authenticated."
+        Use after a tool fails with a "PIN required" error: the SMS was already sent to
+        the account's phone; do NOT retry the original tool first (each retry sends a
+        new SMS) — submit the code here, then retry.
+        """
+        await ctx.session.submit_pin(pin)
+        return "PIN accepted; session authenticated."

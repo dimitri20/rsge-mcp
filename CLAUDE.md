@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Two things live here:
 
 1. **The rs.ge MCP server** (`src/rsge_mcp/`) — an MCP server exposing the Georgian Revenue
-   Service API as LLM tools. **Both generations are implemented** (144 tools across 10 business
+   Service API as LLM tools. **Both generations are implemented** (145 tools across 10 business
    areas): the modern REST/eAPI surface plus five legacy SOAP services (waybills, ntos VAT invoices,
    NSAF special invoices, duty-free, taxpayer Z-reports). See `FEATURES.md` for the capability map
    and coverage roadmap, and `SUMMARY.md` §7 for the overall plan.

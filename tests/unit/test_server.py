@@ -42,6 +42,7 @@ EXPECTED_TOOLS = {
     "rsge_get_customs_declarations",
     "rsge_taxpayer_public_info",
     "rsge_signout",
+    "rsge_submit_pin",  # registered in every 2FA mode (a pending PIN is a dead end otherwise)
     # SOAP (Phase 2)
     "rsge_waybill_check_service_user",
     "rsge_get_waybill",
@@ -172,10 +173,15 @@ async def test_build_server_registers_all_tools() -> None:
 
 
 @pytest.mark.asyncio
-async def test_submit_pin_only_in_tool_mode() -> None:
-    mcp = build_server(load_settings({"RSGE_ENV": "test", "RSGE_2FA_MODE": "tool"}))
-    names = {t.name for t in await mcp.list_tools()}
-    assert "rsge_submit_pin" in names
+async def test_submit_pin_registered_in_every_mode() -> None:
+    # A pending PIN_TOKEN can arise in any mode; the tool must always be available.
+    for mode in ("off", "static_pin", "tool"):
+        env = {"RSGE_ENV": "test", "RSGE_2FA_MODE": mode}
+        if mode == "static_pin":
+            env["RSGE_PIN"] = "1234"
+        mcp = build_server(load_settings(env))
+        names = {t.name for t in await mcp.list_tools()}
+        assert "rsge_submit_pin" in names, mode
 
 
 @pytest.mark.asyncio

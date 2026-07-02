@@ -21,13 +21,24 @@ log = get_logger("soap.parse")
 
 DIFFGRAM = "diffgram"
 
+# Hardened parser for responses from external hosts: no entity resolution, no DTD
+# loading, no network fetches — pins lxml's safe behavior regardless of library defaults.
+_PARSER = etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False)
 
-def parse(xml_text: str, operation: str) -> Any:
-    """Parse a SOAP response body for ``operation`` into Python data."""
+
+def parse(xml_text: str, operation: str, *, status_code: int | None = None) -> Any:
+    """Parse a SOAP response body for ``operation`` into Python data.
+
+    ``status_code`` (the HTTP status, if known) is attached to errors for diagnostics.
+    """
     try:
-        root = etree.fromstring(xml_text.encode("utf-8"))
+        root = etree.fromstring(xml_text.encode("utf-8"), parser=_PARSER)
     except etree.XMLSyntaxError as exc:
-        raise RsgeHttpError(f"SOAP response was not valid XML: {exc}") from exc
+        raise RsgeHttpError(
+            f"SOAP {operation}: response was not valid XML"
+            f"{f' (HTTP {status_code})' if status_code else ''}: {exc}",
+            status_code=status_code,
+        ) from exc
 
     _raise_on_fault(root)
 
@@ -35,7 +46,13 @@ def parse(xml_text: str, operation: str) -> Any:
     if response is None:
         response = _soap_body_child(root)
     if response is None:
-        return None
+        # Well-formed XML that is not a SOAP response (e.g. an XHTML maintenance page
+        # served with HTTP 200). Raising beats silently returning None to the caller.
+        raise RsgeHttpError(
+            f"SOAP {operation}: response contained no {operation}Response or SOAP Body "
+            f"(unexpected content, root <{_local(root)}>)",
+            status_code=status_code,
+        )
 
     diffgram = _find_local(response, DIFFGRAM)
     if diffgram is not None:
