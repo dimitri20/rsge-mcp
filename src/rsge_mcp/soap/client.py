@@ -27,6 +27,11 @@ log = get_logger("soap.client")
 # webserv.rs.ge services have no equivalent there; rewriting them would 404.
 _OVERRIDABLE_HOSTS = frozenset({"services.rs.ge"})
 
+# Services already warned about an ignored RSGE_SOAP_BASE (warn once per service, not per
+# call). An operator who set the override must not believe "everything points at test"
+# while ntos/spec/dutyfree traffic silently goes to PRODUCTION.
+_soap_base_warned: set[str] = set()
+
 
 def _apply_soap_base(endpoint: str, soap_base: str | None) -> str:
     """Rewrite the scheme+netloc of ``endpoint`` to ``soap_base``, keeping path/query.
@@ -96,6 +101,18 @@ class SoapClient:
             "SOAPAction": f'"{action}"',
         }
         target = _apply_soap_base(service.endpoint, self._settings.hosts.soap_base)
+        if (
+            self._settings.hosts.soap_base
+            and target == service.endpoint
+            and service.name not in _soap_base_warned
+        ):
+            _soap_base_warned.add(service.name)
+            log.warning(
+                "RSGE_SOAP_BASE is set but does NOT apply to %s (%s has no counterpart "
+                "on the test host) — its calls go to PRODUCTION",
+                service.name,
+                urlsplit(service.endpoint).netloc,
+            )
         await self._rate.acquire()
         log.debug("SOAP %s -> %s", operation, target)
         try:
